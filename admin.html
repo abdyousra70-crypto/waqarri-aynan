@@ -234,5 +234,196 @@ db.auth.getUser().then(({data})=>{
 if(data.user)checkAdmin(data.user);
 });
 </script>
+ <script>
+const oldLoadExams = loadExams;
+
+loadExams = async function(){
+  await oldLoadExams();
+
+  const {data,error} = await db
+    .from("exams")
+    .select("id,title,is_active")
+    .order("created_at",{ascending:false});
+
+  if(error){
+    status(error.message);
+    return;
+  }
+
+  const cards = el("exams").children;
+
+  data.forEach((exam,i)=>{
+    if(!cards[i]) return;
+
+    const btn = document.createElement("button");
+    btn.textContent = "إدارة الأسئلة";
+    btn.onclick = ()=>manageQuestions(exam);
+    cards[i].appendChild(btn);
+  });
+};
+
+const panel = document.createElement("div");
+panel.className = "card";
+panel.hidden = true;
+panel.innerHTML = `
+<h2 id="questionExamTitle"></h2>
+<h3>إضافة سؤال جديد</h3>
+
+<textarea id="questionText"
+placeholder="اكتبي نص السؤال"></textarea>
+
+<input id="option0" placeholder="الاختيار الأول">
+<input id="option1" placeholder="الاختيار الثاني">
+<input id="option2" placeholder="الاختيار الثالث">
+<input id="option3" placeholder="الاختيار الرابع">
+
+<label>الإجابة الصحيحة</label>
+
+<select id="correctAnswer"
+style="width:100%;padding:13px;
+font-size:16px;border-radius:10px;
+border:1px solid #d8c5a4;
+background:white">
+<option value="">اختاري الإجابة الصحيحة</option>
+<option value="0">الاختيار الأول</option>
+<option value="1">الاختيار الثاني</option>
+<option value="2">الاختيار الثالث</option>
+<option value="3">الاختيار الرابع</option>
+</select>
+
+<button id="saveQuestion"
+onclick="saveQuestion()">حفظ السؤال</button>
+
+<p id="questionStatus"></p>
+
+<h3>الأسئلة الموجودة</h3>
+<div id="questionList"></div>
+
+<button onclick="panel.hidden=true">
+إغلاق إدارة الأسئلة
+</button>
+`;
+
+el("dashboard").appendChild(panel);
+
+let selectedExam = null;
+
+async function manageQuestions(exam){
+  selectedExam = exam;
+  panel.hidden = false;
+
+  el("questionExamTitle").textContent =
+    exam.title;
+
+  el("saveQuestion").disabled =
+    exam.is_active;
+
+  el("questionStatus").textContent =
+    exam.is_active
+    ? "أغلقي الاختبار قبل إضافة الأسئلة"
+    : "";
+
+  await loadQuestions();
+
+  panel.scrollIntoView({
+    behavior:"smooth"
+  });
+}
+
+async function saveQuestion(){
+  if(!selectedExam) return;
+
+  const question =
+    el("questionText").value.trim();
+
+  const options = [0,1,2,3].map(i=>
+    el("option"+i).value.trim()
+  );
+
+  const correct =
+    el("correctAnswer").value;
+
+  if(!question ||
+     options.some(x=>!x) ||
+     correct===""){
+    el("questionStatus").textContent =
+      "أكملي السؤال والاختيارات والإجابة الصحيحة";
+    return;
+  }
+
+  el("saveQuestion").disabled = true;
+
+  const {error} = await db.rpc(
+    "save_exam_question",{
+      p_exam_id:selectedExam.id,
+      p_question:question,
+      p_options:options,
+      p_correct_answer:Number(correct)
+    }
+  );
+
+  el("saveQuestion").disabled = false;
+
+  if(error){
+    el("questionStatus").textContent =
+      error.message;
+    return;
+  }
+
+  el("questionText").value = "";
+
+  [0,1,2,3].forEach(i=>{
+    el("option"+i).value = "";
+  });
+
+  el("correctAnswer").value = "";
+
+  el("questionStatus").textContent =
+    "تم حفظ السؤال بنجاح ✓";
+
+  await loadQuestions();
+}
+
+async function loadQuestions(){
+  const {data,error} = await db
+    .from("questions")
+    .select("id,question,options,position")
+    .eq("exam_id",selectedExam.id)
+    .order("position");
+
+  const list = el("questionList");
+  list.replaceChildren();
+
+  if(error){
+    list.textContent = error.message;
+    return;
+  }
+
+  if(!data.length){
+    list.textContent = "لا توجد أسئلة بعد";
+    return;
+  }
+
+  data.forEach((q,i)=>{
+    const box = document.createElement("div");
+    box.className = "card";
+
+    const heading = document.createElement("h3");
+    heading.textContent =
+      (i+1)+". "+q.question;
+
+    box.appendChild(heading);
+
+    q.options.forEach((option,j)=>{
+      const p = document.createElement("p");
+      p.textContent =
+        ["أ","ب","ج","د"][j]+". "+option;
+      box.appendChild(p);
+    });
+
+    list.appendChild(box);
+  });
+}
+</script>
 </body>
 </html>
