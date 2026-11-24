@@ -1724,5 +1724,67 @@ cards[i].appendChild(button);
 
 })();
 </script>
+ <script>
+(()=>{
+const previousLoad=loadQuestions;
+
+loadQuestions=async function(){
+
+if(!selectedExam)return;
+
+const examId=selectedExam.id;
+
+await previousLoad();
+
+const {data,error}=await db
+.from("questions")
+.select("question,question_type,points")
+.eq("exam_id",examId);
+
+if(error){
+el("questionStatus").textContent=error.message;
+return;
+}
+
+if(!selectedExam||selectedExam.id!==examId)return;
+
+let total=0;
+
+data.forEach(q=>{
+
+const count=q.question_type==="fill_blank"
+?(q.question.match(/\[blank\]/g)||[]).length
+:1;
+
+total+=count*q.points;
+
+});
+
+let summary=el("examQuestionsSummary");
+
+if(!summary){
+
+summary=document.createElement("div");
+summary.id="examQuestionsSummary";
+
+summary.style.background="#e6d7bd";
+summary.style.padding="15px";
+summary.style.borderRadius="12px";
+summary.style.textAlign="center";
+summary.style.fontWeight="bold";
+summary.style.margin="12px 0";
+
+el("questionExamTitle").after(summary);
+
+}
+
+summary.textContent=
+"عدد الأسئلة: "+data.length+
+" | الدرجة الكلية: "+total;
+
+};
+
+})();
+</script>
 </body>
 </html>
