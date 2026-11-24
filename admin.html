@@ -1798,5 +1798,196 @@ summary.textContent=
 
 })();
 </script>
+ <script>
+async function showResultDetails(resultId, box){
+
+  const existing = box.querySelector(".result-details");
+
+  if(existing){
+    existing.remove();
+    return;
+  }
+
+  const panel = document.createElement("div");
+  panel.className = "result-details";
+  panel.style.marginTop = "15px";
+  panel.style.padding = "12px";
+  panel.style.border = "1px solid #d8c5a4";
+  panel.style.borderRadius = "12px";
+  panel.style.background = "#faf7ef";
+
+  box.appendChild(panel);
+
+  panel.textContent = "جارٍ تحميل تفاصيل الإجابات...";
+
+  function addText(parent, value, color){
+    const p = document.createElement("p");
+    p.textContent = value;
+    if(color) p.style.color = color;
+    parent.appendChild(p);
+    return p;
+  }
+
+  function normalizeAnswer(value){
+    return String(value ?? "")
+      .replace(/[\u064B-\u0652\u0670\u0640]/g,"")
+      .replace(/\s+/g," ")
+      .trim();
+  }
+
+  function showAnswer(parent, answer, correct, status, points){
+
+    const item = document.createElement("div");
+
+    item.style.padding = "12px";
+    item.style.margin = "8px 0";
+    item.style.borderRadius = "8px";
+    item.style.overflowWrap = "anywhere";
+
+    const colors = {
+      correct: ["#e8f3e8","#287442","✓ إجابة صحيحة"],
+      wrong: ["#fce8e8","#b42318","✗ إجابة خاطئة"],
+      empty: ["#eeeeee","#666666","— لم تتم الإجابة"]
+    };
+
+    const c = colors[status];
+
+    item.style.background = c[0];
+
+    addText(item,c[2],c[1]).style.fontWeight = "bold";
+
+    addText(item,"إجابة الطالبة: "+(answer || "لم تتم الإجابة"));
+
+    addText(item,"الإجابة النموذجية: "+correct);
+
+    addText(item,"الدرجة: "+points);
+
+    parent.appendChild(item);
+  }
+
+  try{
+
+    const {data,error} = await db.rpc(
+      "get_result_details",
+      {p_result_id:resultId}
+    );
+
+    if(error) throw error;
+
+    panel.replaceChildren();
+
+    addText(panel,"تفاصيل إجابات: "+data.student_name)
+      .style.fontWeight = "bold";
+
+    addText(panel,"الدرجة المسجلة: "+data.score+" من "+data.total);
+
+    let calculatedScore = 0;
+    let calculatedTotal = 0;
+
+    data.questions.forEach((q,i)=>{
+
+      calculatedScore += q.earned_points;
+      calculatedTotal += q.total_points;
+
+      const section = document.createElement("div");
+
+      section.style.borderTop = "1px solid #d8c5a4";
+      section.style.paddingTop = "12px";
+      section.style.marginTop = "15px";
+
+      addText(
+        section,
+        "السؤال "+(i+1)+": "+
+        q.question.replace(/\[blank\]/g,"........")
+      ).style.fontWeight = "bold";
+
+      if(q.question_type === "multiple_choice"){
+
+        const empty = q.student_answer == null;
+
+        const correct = !empty &&
+          q.student_answer === q.correct_answer;
+
+        const answer = empty
+          ? ""
+          : q.options[q.student_answer];
+
+        showAnswer(
+          section,
+          answer,
+          q.options[q.correct_answer],
+          empty ? "empty" : correct ? "correct" : "wrong",
+          q.earned_points+" من "+q.total_points
+        );
+
+      }else{
+
+        const answers = Array.isArray(q.student_answer)
+          ? q.student_answer
+          : [];
+
+        q.correct_text_answers.forEach((correct,j)=>{
+
+          const answer = answers[j] ?? "";
+
+          const empty = normalizeAnswer(answer) === "";
+
+          const valid = !empty &&
+            normalizeAnswer(answer) === normalizeAnswer(correct);
+
+          addText(section,"الفراغ رقم "+(j+1))
+            .style.fontWeight = "bold";
+
+          showAnswer(
+            section,
+            answer,
+            correct,
+            empty ? "empty" : valid ? "correct" : "wrong",
+            (valid ? q.points : 0)+" من "+q.points
+          );
+
+        });
+
+      }
+
+      addText(
+        section,
+        "مجموع درجة السؤال: "+
+        q.earned_points+" من "+q.total_points
+      ).style.fontWeight = "bold";
+
+      panel.appendChild(section);
+
+    });
+
+    if(calculatedScore !== data.score ||
+       calculatedTotal !== data.total){
+
+      addText(
+        panel,
+        "تنبيه: تفاصيل التصحيح الحالية تختلف عن النتيجة الأصلية المسجلة.",
+        "#b42318"
+      );
+
+    }
+
+    const close = document.createElement("button");
+
+    close.type = "button";
+    close.textContent = "إخفاء تفاصيل الإجابات";
+    close.style.background = "#8e7955";
+    close.onclick = ()=>panel.remove();
+
+    panel.appendChild(close);
+
+  }catch(error){
+
+    panel.textContent = error.message ||
+      "تعذر تحميل تفاصيل الإجابات";
+
+  }
+
+}
+</script>
 </body>
 </html>
