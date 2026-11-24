@@ -584,7 +584,7 @@ function downloadResults(){
   };
 
   const rows = [
-   ["اسم الطالبة","الاختبار","الدرجة","الدرجة الكلية","النسبة","التاريخ"]
+ ["اسم الطالبة","الاختبار","الدرجة","الدرجة الكلية","النسبة","التاريخ"],
     ...savedResults.map(r=>[
       r.student_name,
       r.examTitle,
@@ -1033,8 +1033,7 @@ el("questionText").value
 const container=el("blankAnswers");
 
 el("blankCount").textContent=
-"عدد الفراغات: "+count+
-" — الدرجة الكلية: "+count;
+"عدد الفراغات: "+count;
 
 while(container.children.length>count){
 container.lastElementChild.remove();
@@ -1235,14 +1234,15 @@ q.question.match(/\[blank\]/g)||[]
 ).length;
 
 type.textContent=
-"ملء الفراغات — الدرجة: "+count;
+"ملء الفراغات — عدد الفراغات: "+count;
 
 box.appendChild(type);
 
 }else{
 
 type.textContent=
-"اختيار من متعدد — درجة واحدة";
+type.textContent=
+"اختيار من متعدد";
 
 box.appendChild(type);
 
