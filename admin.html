@@ -1604,5 +1604,125 @@ cards[i].appendChild(button);
 
 })();
 </script>
+ <script>
+(()=>{
+const previousLoad=loadQuestions;
+
+loadQuestions=async function(){
+
+if(!selectedExam)return;
+
+const exam=selectedExam;
+
+await previousLoad();
+
+const {data,error}=await db
+.from("questions")
+.select("id,question,question_type,points,position")
+.eq("exam_id",exam.id)
+.order("position");
+
+if(error){
+el("questionStatus").textContent=error.message;
+return;
+}
+
+if(!selectedExam||selectedExam.id!==exam.id)return;
+
+const cards=el("questionList").children;
+
+data.forEach((q,i)=>{
+
+if(!cards[i])return;
+
+const count=q.question_type==="fill_blank"
+?(q.question.match(/\[blank\]/g)||[]).length
+:1;
+
+const info=document.createElement("p");
+
+info.style.color="#896b39";
+info.style.fontWeight="bold";
+
+info.textContent=
+(q.question_type==="fill_blank"
+?"درجة كل فراغ: "
+:"درجة السؤال: ")
++q.points
++" | الدرجة الكلية: "
++(q.points*count);
+
+const button=document.createElement("button");
+
+button.textContent="تحديد الدرجة";
+button.style.background="#8c7955";
+button.disabled=exam.is_active;
+
+button.onclick=async()=>{
+
+const value=prompt(
+q.question_type==="fill_blank"
+?"حددي درجة كل فراغ من 1 إلى 100"
+:"حددي درجة السؤال من 1 إلى 100",
+String(q.points)
+);
+
+if(value===null)return;
+
+const points=Number(value);
+
+if(!Number.isInteger(points)||
+points<1||points>100){
+
+alert("أدخلي درجة صحيحة بين 1 و100");
+return;
+
+}
+
+button.disabled=true;
+
+try{
+
+const {data,error}=await db.rpc(
+"set_question_points",{
+
+p_question_id:q.id,
+p_points:points
+
+});
+
+if(error)throw error;
+
+if(!data){
+throw new Error("تعذر حفظ الدرجة");
+}
+
+el("questionStatus").textContent=
+"تم حفظ درجة السؤال بنجاح ✓";
+
+await loadQuestions();
+
+}catch(error){
+
+el("questionStatus").textContent=
+error.message;
+
+}finally{
+
+button.disabled=exam.is_active;
+
+}
+
+};
+
+cards[i].appendChild(info);
+cards[i].appendChild(button);
+
+});
+
+};
+
+})();
+</script>
 </body>
 </html>
