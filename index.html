@@ -528,5 +528,162 @@ event.returnValue = "";
 
 loadExams();
 </script>
+  
+<script>
+(()=>{
+let pendingSave=Promise.resolve();
+
+const originalRpc=db.rpc.bind(db);
+
+db.rpc=async function(name,params,options){
+
+const response=await originalRpc(
+name,params,options
+);
+
+if(name==="start_exam" &&
+!response.error && response.data){
+
+restoredAnswers=
+response.data.saved_answers||{};
+
+serverOffset=
+new Date(response.data.server_now).getTime()
+-Date.now();
+
+}
+
+return response;
+};
+
+let restoredAnswers={};
+let serverOffset=0;
+
+const originalRender=renderQuestions;
+
+renderQuestions=function(){
+
+answers={...restoredAnswers};
+
+originalRender();
+
+document.querySelectorAll(
+"#questions input[type=radio]"
+).forEach(radio=>{
+
+const questionId=
+radio.name.replace("question_","");
+
+radio.checked=
+answers[questionId]===Number(radio.value);
+
+radio.onchange=()=>{
+
+if(expired||finished||submitting)return;
+
+if(Date.now()+serverOffset>=deadline){
+updateTimer();
+return;
+}
+
+answers[questionId]=Number(radio.value);
+
+updateProgress();
+
+const examId=selectedExam.id;
+const code=accessCode;
+const name=studentName;
+
+const changedAnswer={
+[questionId]:Number(radio.value)
+};
+
+status("جارٍ حفظ الإجابة...");
+
+pendingSave=pendingSave.then(async()=>{
+
+const {error}=await db.rpc(
+"save_exam_answers",{
+p_exam_id:examId,
+p_code:code,
+p_student_name:name,
+p_answers:changedAnswer
+});
+
+if(error)throw error;
+
+status("تم حفظ الإجابة تلقائيًا ✓");
+
+}).catch(error=>{
+status("تعذر حفظ الإجابة: "+
+error.message);
+});
+
+};
+
+});
+
+};
+
+updateTimer=function(){
+
+if(finished)return;
+
+const remaining=Math.max(
+0,Math.ceil(
+(deadline-Date.now()-serverOffset)/1000
+)
+);
+
+const minutes=Math.floor(remaining/60);
+const seconds=remaining%60;
+
+el("timer").textContent=
+"الوقت المتبقي: "+
+String(minutes).padStart(2,"0")+":"+
+String(seconds).padStart(2,"0");
+
+if(remaining<=60){
+el("timer").style.background="#a34d40";
+}
+
+if(remaining===0){
+clearInterval(timerInterval);
+expired=true;
+lockAnswers(true);
+submitExam(true);
+}
+
+};
+
+const originalSubmit=submitExam;
+
+submitExam=async function(automatic){
+
+if(submitting||finished)return;
+
+await pendingSave;
+
+await originalSubmit(automatic);
+
+};
+
+const notice=el("registration")
+.querySelector("p:last-of-type");
+
+if(notice){
+notice.textContent=
+"رمز الدخول صالح لمحاولة واحدة. "+
+"يمكنكِ استئناف الاختبار بالاسم والرمز نفسيهما "+
+"قبل انتهاء الوقت، دون الحصول على وقت إضافي. "+
+"تُحفظ الإجابات تلقائيًا عند توفر الإنترنت.";
+}
+
+el("startButton").textContent=
+"بدء أو استئناف الاختبار";
+
+})();
+</script>
+
 </body>
 </html>
