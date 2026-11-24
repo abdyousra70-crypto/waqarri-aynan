@@ -306,17 +306,7 @@ status("جارٍ التحقق من الاختبار ورمز الدخول...");
 
 try{
 
-const {data:questionData,error:questionError}
-= await db.from("questions")
-..select("id,question,options,position,question_type")
-.eq("exam_id",selectedExam.id)
-.order("position",{ascending:true});
 
-if(questionError) throw questionError;
-
-if(!questionData.length){
-throw new Error("لا توجد أسئلة في الاختبار");
-}
 
 const {data,error} = await db.rpc("start_exam",{
 p_exam_id:selectedExam.id,
@@ -331,8 +321,7 @@ deadline = new Date(data.expires_at).getTime();
 if(!Number.isFinite(deadline)){
 throw new Error("تعذر تحديد وقت الاختبار");
 }
-
-questions = questionData;
+questions = data.questions;
 answers = {};
 finished = false;
 expired = false;
