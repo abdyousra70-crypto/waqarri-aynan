@@ -563,7 +563,19 @@ async function loadResults(){
       p.textContent = value;
       box.appendChild(p);
     });
+const detailsButton = document.createElement("button");
 
+detailsButton.type = "button";
+
+detailsButton.textContent = "عرض تفاصيل الإجابات";
+
+detailsButton.style.background = "#b49a72";
+
+detailsButton.onclick = () => {
+  showResultDetails(r.id, box);
+};
+
+box.appendChild(detailsButton);
     list.appendChild(box);
   });
 }
