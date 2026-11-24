@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مجموعة وقري عينًا</title>
+<style>
+*{box-sizing:border-box}
+body{
+background:#f5efe5;
+color:#665139;
+font-family:Tahoma,Arial,sans-serif;
+margin:0;
+line-height:1.9;
+}
+header{
+background:#e6d7bd;
+padding:35px 15px;
+text-align:center;
+}
+h1{color:#896b39;font-size:30px}
+main{max-width:700px;margin:auto;padding:20px}
+.card{
+background:#fffdf8;
+padding:24px;
+border:1px solid #d8c5a4;
+border-radius:18px;
+margin-bottom:20px;
+}
+button{
+background:#967746;
+color:white;
+border:0;
+border-radius:10px;
+padding:14px;
+width:100%;
+font-size:17px;
+margin-top:12px;
+cursor:pointer;
+}
+label{
+display:block;
+padding:12px;
+background:#f5efe5;
+border-radius:10px;
+margin:8px 0;
+}
+#timer{
+position:sticky;
+top:0;
+background:#e6d7bd;
+text-align:center;
+padding:12px;
+font-size:22px;
+border-radius:10px;
+}
+footer{text-align:center;padding:20px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+<div>﷽</div>
+<h1>مجموعة وقري عينًا</h1>
+<p>منصة الاختبارات الشرعية والقرآنية</p>
+</header>
+<main>
+<section id="home" class="card">
+<h2>أهلًا وسهلًا بكِ</h2>
+<p>نسأل الله لكِ التوفيق والسداد</p>
+<h3>اختبار جزء عمّ التجريبي</h3>
+<p>عدد الأسئلة: 5</p>
+<p>مدة الاختبار: 5 دقائق</p>
+<button onclick="start()">ابدئي الاختبار</button>
+</section>
+
+<section id="exam" hidden>
+<div id="timer"></div>
+<div id="questions"></div>
+<button onclick="finish()">تسليم الاختبار</button>
+</section>
+
+<section id="result" class="card" hidden>
+<h2>نتيجة الاختبار</h2>
+<h1 id="score"></h1>
+<p id="message"></p>
+<button onclick="location.reload()">العودة للرئيسية</button>
+</section>
+</main>
+<footer>مجموعة وقري عينًا © 2026</footer>
+
+<script>
+const minutes=5;
+const questions=[
+{
+q:"ما السورة التي تبدأ بقوله تعالى: عم يتساءلون؟",
+a:["النازعات","النبأ","عبس"],
+c:1
+},
+{
+q:"في أي سورة ورد قوله تعالى: كلا إن الإنسان ليطغى؟",
+a:["العلق","الفجر","البلد"],
+c:0
+},
+{
+q:"ما السورة التي ورد فيها قوله تعالى: والليل إذا عسعس؟",
+a:["الانشقاق","التكوير","الانفطار"],
+c:1
+},
+{
+q:"ما السورة التي تبدأ بقوله تعالى: ويل لكل همزة لمزة؟",
+a:["الهمزة","الماعون","التكاثر"],
+c:0
+},
+{
+q:"في أي سورة ورد قوله تعالى: إن إلى ربك الرجعى؟",
+a:["الضحى","الشرح","العلق"],
+c:2
+}
+];
+
+let clock;
+let deadline;
+let finished=false;
+
+function start(){
+document.getElementById("home").hidden=true;
+document.getElementById("exam").hidden=false;
+document.getElementById("questions").innerHTML=
+questions.map((x,i)=>`
+<div class="card">
+<h3>${i+1}. ${x.q}</h3>
+${x.a.map((a,j)=>`
+<label>
+<input type="radio" name="q${i}" value="${j}">
+${a}
+</label>`).join("")}
+</div>`).join("");
+
+deadline=Date.now()+minutes*60000;
+clock=setInterval(tick,1000);
+tick();
+}
+
+function tick(){
+let t=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+document.getElementById("timer").textContent=
+"الوقت المتبقي: "+Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
+if(t===0)finish();
+}
+
+function finish(){
+if(finished)return;
+finished=true;
+clearInterval(clock);
+let score=0;
+questions.forEach((x,i)=>{
+let answer=document.querySelector(
+'input[name="q'+i+'"]:checked'
+);
+if(answer&&Number(answer.value)===x.c)score++;
+});
+document.getElementById("exam").hidden=true;
+document.getElementById("result").hidden=false;
+document.getElementById("score").textContent=
+score+" / "+questions.length+" — "+Math.round(score/questions.length*100)+"%";
+document.getElementById("message").textContent=
+score===questions.length?
+"أحسنتِ، بارك الله فيكِ":
+"بارك الله في جهودكِ، ووفقكِ للمزيد";
+window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>
