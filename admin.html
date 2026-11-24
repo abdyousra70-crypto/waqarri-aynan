@@ -974,6 +974,299 @@ card.appendChild(button);
 
 })();
 </script>
+<script>
+(()=>{
+const typeBox=document.createElement("div");
 
+typeBox.innerHTML=`
+<label>نوع السؤال</label>
+<select id="questionType"
+style="width:100%;padding:13px;
+font-size:16px;border-radius:10px;
+border:1px solid #d8c5a4;
+background:white;margin:8px 0">
+<option value="multiple_choice">
+اختيار من متعدد
+</option>
+<option value="fill_blank">
+ملء الفراغات
+</option>
+</select>
+`;
+
+el("questionText").before(typeBox);
+
+const blankBox=document.createElement("div");
+blankBox.hidden=true;
+
+blankBox.innerHTML=`
+<p>
+ضعي الرمز [blank] في مكان كل فراغ
+داخل نص السؤال.
+</p>
+
+<button id="insertBlank" type="button">
++ إضافة فراغ
+</button>
+
+<p id="blankCount"></p>
+<div id="blankAnswers"></div>
+`;
+
+el("questionText").after(blankBox);
+
+const choiceFields=[
+el("option0"),
+el("option1"),
+el("option2"),
+el("option3"),
+el("correctAnswer"),
+el("correctAnswer").previousElementSibling
+];
+
+function updateBlanks(){
+
+const count=(
+el("questionText").value
+.match(/\[blank\]/g)||[]
+).length;
+
+const container=el("blankAnswers");
+
+el("blankCount").textContent=
+"عدد الفراغات: "+count+
+" — الدرجة الكلية: "+count;
+
+while(container.children.length>count){
+container.lastElementChild.remove();
+}
+
+while(container.children.length<
+Math.min(count,50)){
+
+const input=document.createElement("input");
+
+input.placeholder=
+"الإجابة الصحيحة للفراغ "+
+(container.children.length+1);
+
+container.appendChild(input);
+}
+}
+
+function changeType(){
+
+const fill=
+el("questionType").value==="fill_blank";
+
+choiceFields.forEach(field=>{
+if(field)field.hidden=fill;
+});
+
+blankBox.hidden=!fill;
+
+el("questionText").placeholder=fill
+?"مثال: إن مع العسر [blank]"
+:"اكتبي نص السؤال";
+
+if(fill)updateBlanks();
+}
+
+el("questionType").onchange=changeType;
+
+el("questionText").addEventListener(
+"input",updateBlanks
+);
+
+el("insertBlank").onclick=()=>{
+
+const field=el("questionText");
+const start=field.selectionStart;
+const end=field.selectionEnd;
+
+field.setRangeText(
+" [blank] ",start,end,"end"
+);
+
+updateBlanks();
+field.focus();
+};
+
+const originalSaveQuestion=saveQuestion;
+
+saveQuestion=async function(){
+
+if(el("questionType").value
+!=="fill_blank"){
+return originalSaveQuestion();
+}
+
+if(!selectedExam)return;
+
+if(selectedExam.is_active){
+el("questionStatus").textContent=
+"أغلقي الاختبار أولاً";
+return;
+}
+
+const question=
+el("questionText").value.trim();
+
+const count=(
+question.match(/\[blank\]/g)||[]
+).length;
+
+const answers=Array.from(
+el("blankAnswers").children
+).map(input=>input.value.trim());
+
+if(!question||
+count<1||
+count>50||
+answers.length!==count||
+answers.some(x=>!x)){
+
+el("questionStatus").textContent=
+"أكملي نص السؤال والإجابات الصحيحة لكل فراغ";
+return;
+}
+
+const button=el("saveQuestion");
+button.disabled=true;
+
+try{
+
+const {error}=await db.rpc(
+"save_fill_blank_question",{
+p_exam_id:selectedExam.id,
+p_question:question,
+p_correct_answers:answers
+});
+
+if(error)throw error;
+
+el("questionText").value="";
+updateBlanks();
+
+el("questionStatus").textContent=
+"تم حفظ سؤال الفراغات بنجاح ✓";
+
+await loadQuestions();
+
+}catch(error){
+
+el("questionStatus").textContent=
+error.message;
+
+}finally{
+
+button.disabled=
+!selectedExam||selectedExam.is_active;
+
+}
+};
+
+const originalManageQuestions=
+manageQuestions;
+
+manageQuestions=async function(exam){
+
+el("questionType").value=
+"multiple_choice";
+
+el("questionText").value="";
+
+[0,1,2,3].forEach(i=>{
+el("option"+i).value="";
+});
+
+el("correctAnswer").value="";
+
+updateBlanks();
+changeType();
+
+await originalManageQuestions(exam);
+};
+
+loadQuestions=async function(){
+
+if(!selectedExam)return;
+
+const examId=selectedExam.id;
+
+const {data,error}=await db
+.from("questions")
+.select("id,question,options,position,question_type")
+.eq("exam_id",examId)
+.order("position");
+
+if(selectedExam.id!==examId)return;
+
+const list=el("questionList");
+list.replaceChildren();
+
+if(error){
+list.textContent=error.message;
+return;
+}
+
+if(!data.length){
+list.textContent="لا توجد أسئلة بعد";
+return;
+}
+
+data.forEach((q,i)=>{
+
+const box=document.createElement("div");
+box.className="card";
+
+const heading=document.createElement("h3");
+
+heading.textContent=(i+1)+". "+
+q.question.replace(/\[blank\]/g,"........");
+
+box.appendChild(heading);
+
+const type=document.createElement("p");
+
+if(q.question_type==="fill_blank"){
+
+const count=(
+q.question.match(/\[blank\]/g)||[]
+).length;
+
+type.textContent=
+"ملء الفراغات — الدرجة: "+count;
+
+box.appendChild(type);
+
+}else{
+
+type.textContent=
+"اختيار من متعدد — درجة واحدة";
+
+box.appendChild(type);
+
+(q.options||[]).forEach((option,j)=>{
+
+const p=document.createElement("p");
+
+p.textContent=
+["أ","ب","ج","د"][j]+". "+option;
+
+box.appendChild(p);
+
+});
+}
+
+list.appendChild(box);
+
+});
+};
+
+changeType();
+
+})();
+</script>
 </body>
 </html>
