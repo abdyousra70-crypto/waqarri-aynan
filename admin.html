@@ -625,5 +625,183 @@ el("resultsExam").addEventListener("change",()=>{
 });
 </script>
 
+<script>
+(()=>{
+const card = document.createElement("div");
+card.className = "card";
+
+card.innerHTML = `
+<h2>إدارة رموز دخول الطالبات</h2>
+
+<label>اختاري الاختبار</label>
+
+<select id="codeExam"
+style="width:100%;padding:13px;
+border:1px solid #d8c5a4;
+border-radius:10px;font-size:16px">
+</select>
+
+<button id="refreshCodes">
+تحديث قائمة الاختبارات
+</button>
+
+<button id="generateCode">
+توليد رمز دخول جديد
+</button>
+
+<p id="codeStatus"></p>
+
+<input id="newExamCode"
+readonly dir="ltr"
+placeholder="سيظهر رمز الدخول هنا">
+
+<button id="copyExamCode">
+نسخ رمز الدخول
+</button>
+
+<h3>سجل رموز الدخول</h3>
+<div id="codeCount"></div>
+<div id="codeList"></div>
+`;
+
+el("dashboard").appendChild(card);
+
+async function loadCodeExams(){
+const {data,error}=await db
+.from("exams")
+.select("id,title")
+.order("created_at",{ascending:false});
+
+if(error){
+el("codeStatus").textContent=error.message;
+return;
+}
+
+const select=el("codeExam");
+const previous=select.value;
+select.replaceChildren();
+
+for(const exam of data){
+select.add(new Option(exam.title,exam.id));
+}
+
+if(data.some(x=>x.id===previous)){
+select.value=previous;
+}
+
+await loadAccessCodes();
+}
+
+async function loadAccessCodes(){
+const list=el("codeList");
+list.replaceChildren();
+el("codeCount").textContent="";
+
+const examId=el("codeExam").value;
+if(!examId)return;
+
+const {data,error}=await db
+.from("exam_access_codes")
+.select("code,student_name,started_at,used_at")
+.eq("exam_id",examId)
+.order("created_at",{ascending:false});
+
+if(error){
+list.textContent=error.message;
+return;
+}
+
+const used=data.filter(x=>x.used_at).length;
+const available=data.filter(x=>!x.started_at&&!x.used_at).length;
+
+el("codeCount").textContent=
+"الرموز المتاحة: "+available+
+" — المسلمة: "+used;
+
+for(const item of data){
+const box=document.createElement("div");
+box.className="card";
+
+const code=document.createElement("p");
+code.dir="ltr";
+code.style.overflowWrap="anywhere";
+code.textContent=item.code;
+
+const name=document.createElement("p");
+name.textContent="الطالبة: "+
+(item.student_name||"لم تدخل بعد");
+
+const state=document.createElement("p");
+state.textContent=item.used_at
+?"الحالة: تم التسليم"
+:item.started_at
+?"الحالة: بدأ الاختبار"
+:"الحالة: متاح";
+
+box.append(code,name,state);
+list.appendChild(box);
+}
+}
+
+el("generateCode").onclick=async()=>{
+const examId=el("codeExam").value;
+
+if(!examId){
+el("codeStatus").textContent="اختاري الاختبار أولاً";
+return;
+}
+
+el("generateCode").disabled=true;
+
+try{
+const {data,error}=await db.rpc(
+"generate_exam_code",{
+p_exam_id:examId
+});
+
+if(error)throw error;
+
+el("newExamCode").value=data;
+el("codeStatus").textContent=
+"تم إنشاء رمز الدخول بنجاح";
+await loadAccessCodes();
+
+}catch(error){
+el("codeStatus").textContent=error.message;
+}finally{
+el("generateCode").disabled=false;
+}
+};
+
+el("copyExamCode").onclick=async()=>{
+const value=el("newExamCode").value;
+if(!value)return;
+
+try{
+await navigator.clipboard.writeText(value);
+el("codeStatus").textContent="تم نسخ الرمز";
+}catch{
+el("newExamCode").select();
+el("codeStatus").textContent="انسخي الرمز يدوياً";
+}
+};
+
+el("refreshCodes").onclick=loadCodeExams;
+
+el("codeExam").onchange=()=>{
+el("newExamCode").value="";
+el("codeStatus").textContent="";
+loadAccessCodes();
+};
+
+const previousLoadExams=loadExams;
+
+loadExams=async function(){
+await previousLoadExams();
+await loadCodeExams();
+};
+})();
+</script>
+
 </body>
 </html>
