@@ -1353,5 +1353,257 @@ cards[i].appendChild(button);
 
 })();
 </script>
+ <script>
+(()=>{
+let editingQuestionId=null;
+
+const cancelButton=document.createElement("button");
+
+cancelButton.textContent="إلغاء تعديل السؤال";
+cancelButton.style.background="#b49a72";
+cancelButton.hidden=true;
+
+el("saveQuestion").after(cancelButton);
+
+function resetEditing(){
+
+editingQuestionId=null;
+
+el("saveQuestion").textContent="حفظ السؤال";
+cancelButton.hidden=true;
+
+el("questionText").value="";
+
+[0,1,2,3].forEach(i=>{
+el("option"+i).value="";
+});
+
+el("correctAnswer").value="";
+
+el("questionText").dispatchEvent(
+new Event("input")
+);
+
+}
+
+cancelButton.onclick=resetEditing;
+
+const previousManage=manageQuestions;
+
+manageQuestions=async function(exam){
+
+resetEditing();
+
+await previousManage(exam);
+
+};
+
+const previousSave=saveQuestion;
+
+saveQuestion=async function(){
+
+if(!editingQuestionId){
+return previousSave();
+}
+
+if(!selectedExam||selectedExam.is_active){
+return;
+}
+
+const type=el("questionType").value;
+const question=el("questionText").value.trim();
+
+const options=[0,1,2,3].map(i=>
+el("option"+i).value.trim()
+);
+
+const correct=el("correctAnswer").value;
+
+const texts=Array.from(
+el("blankAnswers").children
+).map(input=>input.value.trim());
+
+if(!question){
+el("questionStatus").textContent=
+"اكتبي نص السؤال";
+return;
+}
+
+if(type==="multiple_choice" &&
+(options.some(x=>!x)||correct==="")){
+el("questionStatus").textContent=
+"أكملي الاختيارات والإجابة الصحيحة";
+return;
+}
+
+if(type==="fill_blank" &&
+(!texts.length||texts.some(x=>!x))){
+el("questionStatus").textContent=
+"أكملي إجابات الفراغات";
+return;
+}
+
+const button=el("saveQuestion");
+button.disabled=true;
+
+try{
+
+const {data,error}=await db.rpc(
+"update_exam_question",{
+
+p_question_id:editingQuestionId,
+p_question:question,
+p_question_type:type,
+
+p_options:type==="multiple_choice"
+?options:[],
+
+p_correct_answer:type==="multiple_choice"
+?Number(correct):null,
+
+p_correct_text_answers:type==="fill_blank"
+?texts:null
+
+});
+
+if(error)throw error;
+
+if(!data){
+throw new Error("تعذر تعديل السؤال");
+}
+
+resetEditing();
+
+el("questionStatus").textContent=
+"تم تعديل السؤال بنجاح ✓";
+
+await loadQuestions();
+
+}catch(error){
+
+el("questionStatus").textContent=
+error.message;
+
+}finally{
+
+button.disabled=
+!selectedExam||selectedExam.is_active;
+
+}
+
+};
+
+const previousLoad=loadQuestions;
+
+loadQuestions=async function(){
+
+if(!selectedExam)return;
+
+const exam=selectedExam;
+
+await previousLoad();
+
+const {data,error}=await db
+.from("questions")
+.select("id,question,options,question_type,position")
+.eq("exam_id",exam.id)
+.order("position");
+
+if(error){
+el("questionStatus").textContent=
+error.message;
+return;
+}
+
+if(selectedExam.id!==exam.id)return;
+
+const cards=el("questionList").children;
+
+data.forEach((q,i)=>{
+
+if(!cards[i])return;
+
+const button=document.createElement("button");
+
+button.textContent="تعديل السؤال";
+button.style.background="#b49a72";
+button.disabled=exam.is_active;
+
+button.onclick=async()=>{
+
+const {data:key,error}=await db
+.from("answer_keys")
+.select("correct_answer,correct_text_answers")
+.eq("question_id",q.id)
+.single();
+
+if(error){
+el("questionStatus").textContent=
+error.message;
+return;
+}
+
+if(selectedExam.id!==exam.id)return;
+
+resetEditing();
+
+editingQuestionId=q.id;
+
+el("questionType").value=q.question_type;
+el("questionText").value=q.question;
+
+el("questionType").dispatchEvent(
+new Event("change")
+);
+
+el("questionText").dispatchEvent(
+new Event("input")
+);
+
+if(q.question_type==="multiple_choice"){
+
+[0,1,2,3].forEach(j=>{
+el("option"+j).value=q.options[j]||"";
+});
+
+el("correctAnswer").value=
+String(key.correct_answer);
+
+}else{
+
+Array.from(
+el("blankAnswers").children
+).forEach((input,j)=>{
+
+input.value=
+key.correct_text_answers[j]||"";
+
+});
+
+}
+
+el("saveQuestion").textContent=
+"حفظ تعديلات السؤال";
+
+cancelButton.hidden=false;
+
+el("questionStatus").textContent=
+"أنتِ الآن في وضع تعديل السؤال";
+
+el("questionText").scrollIntoView({
+behavior:"smooth",
+block:"center"
+});
+
+};
+
+cards[i].appendChild(button);
+
+});
+
+};
+
+})();
+</script>
 </body>
 </html>
