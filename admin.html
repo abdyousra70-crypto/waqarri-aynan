@@ -803,5 +803,177 @@ await loadCodeExams();
 })();
 </script>
 
+<script>
+(()=>{
+const editPanel=document.createElement("div");
+editPanel.className="card";
+editPanel.hidden=true;
+
+editPanel.innerHTML=`
+<h2>تعديل الاختبار</h2>
+
+<label>اسم الاختبار</label>
+<input id="editExamTitle">
+
+<label>وصف الاختبار</label>
+<textarea id="editExamDescription"></textarea>
+
+<label>مدة الاختبار بالدقائق</label>
+<input id="editExamDuration"
+type="number" min="1">
+
+<button id="saveExamChanges">
+حفظ التعديلات
+</button>
+
+<button id="cancelExamChanges">
+إلغاء التعديل
+</button>
+
+<p id="editExamStatus"></p>
+`;
+
+el("dashboard").appendChild(editPanel);
+
+let editingExamId=null;
+
+function openEditExam(exam){
+if(exam.is_active){
+alert("أغلقي الاختبار أولاً قبل تعديله");
+return;
+}
+
+editingExamId=exam.id;
+
+el("editExamTitle").value=exam.title;
+el("editExamDescription").value=
+exam.description||"";
+
+el("editExamDuration").value=
+exam.duration_minutes;
+
+el("editExamStatus").textContent="";
+editPanel.hidden=false;
+
+editPanel.scrollIntoView({
+behavior:"smooth"
+});
+}
+
+el("cancelExamChanges").onclick=()=>{
+editPanel.hidden=true;
+editingExamId=null;
+};
+
+el("saveExamChanges").onclick=async()=>{
+
+const title=
+el("editExamTitle").value.trim();
+
+const description=
+el("editExamDescription").value.trim();
+
+const duration=
+Number(el("editExamDuration").value);
+
+if(!editingExamId)return;
+
+if(!title||
+!Number.isInteger(duration)||
+duration<1){
+
+el("editExamStatus").textContent=
+"أدخلي اسم الاختبار ومدة صحيحة";
+return;
+}
+
+const button=el("saveExamChanges");
+button.disabled=true;
+
+try{
+
+const {data,error}=await db
+.from("exams")
+.update({
+title:title,
+description:description,
+duration_minutes:duration
+})
+.eq("id",editingExamId)
+.eq("is_active",false)
+.select("id")
+.maybeSingle();
+
+if(error)throw error;
+
+if(!data){
+throw new Error(
+"تعذر التعديل. تأكدي أن الاختبار مغلق"
+);
+}
+
+editPanel.hidden=true;
+editingExamId=null;
+
+status("تم تعديل الاختبار بنجاح ✓");
+
+await loadExams();
+
+}catch(error){
+
+el("editExamStatus").textContent=
+error.message;
+
+}finally{
+button.disabled=false;
+}
+};
+
+const previousLoadExams=loadExams;
+
+loadExams=async function(){
+
+await previousLoadExams();
+
+const {data,error}=await db
+.from("exams")
+.select("id,title,description,duration_minutes,is_active")
+.order("created_at",{ascending:false});
+
+if(error){
+status(error.message);
+return;
+}
+
+const cards=el("exams").children;
+
+data.forEach(exam=>{
+
+const card=Array.from(cards).find(c=>
+c.querySelector("h3")?.textContent===exam.title
+);
+
+if(!card)return;
+
+const matches=data.filter(
+e=>e.title===exam.title
+);
+
+if(matches.length!==1)return;
+
+const button=document.createElement("button");
+
+button.textContent="تعديل الاختبار";
+button.style.background="#b49a72";
+
+button.onclick=()=>openEditExam(exam);
+
+card.appendChild(button);
+});
+};
+
+})();
+</script>
+
 </body>
 </html>
