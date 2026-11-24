@@ -1,9 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>مجموعة وقري عينًا</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
 body{
@@ -19,164 +21,432 @@ padding:35px 15px;
 text-align:center;
 }
 h1{color:#896b39;font-size:30px}
-main{max-width:700px;margin:auto;padding:20px}
+main{
+max-width:700px;
+margin:auto;
+padding:20px;
+}
 .card{
 background:#fffdf8;
-padding:24px;
 border:1px solid #d8c5a4;
 border-radius:18px;
+padding:24px;
 margin-bottom:20px;
 }
+input,button{
+font-family:inherit;
+font-size:16px;
+}
+input[type=text]{
+width:100%;
+padding:15px;
+border:1px solid #d8c5a4;
+border-radius:10px;
+margin:12px 0;
+}
 button{
-background:#967746;
+width:100%;
+background:#967b4e;
 color:white;
 border:0;
 border-radius:10px;
-padding:14px;
-width:100%;
-font-size:17px;
-margin-top:12px;
+padding:15px;
+margin:10px 0;
 cursor:pointer;
 }
-label{
-display:block;
-padding:12px;
+button:disabled{opacity:.5}
+.option{
+display:flex;
+align-items:center;
+gap:10px;
 background:#f5efe5;
+padding:13px;
+border:1px solid #d8c5a4;
 border-radius:10px;
-margin:8px 0;
+margin:10px 0;
+cursor:pointer;
+}
+.option:has(input:checked){
+background:#e6d7bd;
+border-color:#896b39;
+}
+input[type=radio]{
+accent-color:#967b4e;
+width:20px;
+height:20px;
+flex-shrink:0;
 }
 #timer{
 position:sticky;
 top:0;
-background:#e6d7bd;
-text-align:center;
+z-index:10;
+background:#896b39;
+color:white;
 padding:12px;
-font-size:22px;
+text-align:center;
 border-radius:10px;
+font-size:22px;
+margin-bottom:20px;
 }
-footer{text-align:center;padding:20px}
+#grade{
+font-size:42px;
+color:#896b39;
+font-weight:bold;
+}
+footer{
+text-align:center;
+padding:25px;
+color:#8b7961;
+}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
+
 <header>
-<div>﷽</div>
+<p style="font-size:25px">﷽</p>
 <h1>مجموعة وقري عينًا</h1>
 <p>منصة الاختبارات الشرعية والقرآنية</p>
 </header>
+
 <main>
+
 <section id="home" class="card">
 <h2>أهلًا وسهلًا بكِ</h2>
 <p>نسأل الله لكِ التوفيق والسداد</p>
-<h3>اختبار جزء عمّ التجريبي</h3>
-<p>عدد الأسئلة: 5</p>
-<p>مدة الاختبار: 5 دقائق</p>
-<button onclick="start()">ابدئي الاختبار</button>
+<h3>الاختبارات المتاحة</h3>
+<div id="examList">جارٍ تحميل الاختبارات...</div>
+<button onclick="loadExams()">تحديث الاختبارات</button>
 </section>
 
-<section id="exam" hidden>
-<div id="timer"></div>
-<div id="questions"></div>
-<button onclick="finish()">تسليم الاختبار</button>
+<section id="registration" class="card" hidden>
+<h2 id="examTitle"></h2>
+<p id="examDescription"></p>
+<p id="examDuration"></p>
+<label for="studentName">اسم الطالبة الكامل</label>
+<input type="text" id="studentName"
+maxlength="150"
+placeholder="اكتبي اسمكِ الكامل">
+<button id="startButton" onclick="startExam()">ابدئي الاختبار</button>
+<button onclick="goHome()">العودة</button>
 </section>
 
-<section id="result" class="card" hidden>
-<h2>نتيجة الاختبار</h2>
-<h1 id="score"></h1>
-<p id="message"></p>
-<button onclick="location.reload()">العودة للرئيسية</button>
-</section>
-</main>
-<footer>مجموعة وقري عينًا © 2026</footer>
-
-<script>
-const minutes=5;
-const questions=[
-{
-q:"ما السورة التي تبدأ بقوله تعالى: عم يتساءلون؟",
-a:["النازعات","النبأ","عبس"],
-c:1
-},
-{
-q:"في أي سورة ورد قوله تعالى: كلا إن الإنسان ليطغى؟",
-a:["العلق","الفجر","البلد"],
-c:0
-},
-{
-q:"ما السورة التي ورد فيها قوله تعالى: والليل إذا عسعس؟",
-a:["الانشقاق","التكوير","الانفطار"],
-c:1
-},
-{
-q:"ما السورة التي تبدأ بقوله تعالى: ويل لكل همزة لمزة؟",
-a:["الهمزة","الماعون","التكاثر"],
-c:0
-},
-{
-q:"في أي سورة ورد قوله تعالى: إن إلى ربك الرجعى؟",
-a:["الضحى","الشرح","العلق"],
-c:2
-}
-];
-
-let clock;
-let deadline;
-let finished=false;
-
-function start(){
-document.getElementById("home").hidden=true;
-document.getElementById("exam").hidden=false;
-document.getElementById("questions").innerHTML=
-questions.map((x,i)=>`
+<section id="examPage" hidden>
+<div id="timer">00:00</div>
 <div class="card">
-<h3>${i+1}. ${x.q}</h3>
-${x.a.map((a,j)=>`
-<label>
-<input type="radio" name="q${i}" value="${j}">
-${a}
-</label>`).join("")}
-</div>`).join("");
+<h2 id="currentTitle"></h2>
+<p id="studentLabel"></p>
+<p id="progress"></p>
+</div>
+<div id="questions"></div>
+<button id="submitButton" onclick="submitExam(false)">
+تسليم الاختبار
+</button>
+</section>
 
-deadline=Date.now()+minutes*60000;
-clock=setInterval(tick,1000);
-tick();
-}
+<section id="resultPage" class="card" hidden style="text-align:center">
+<h2>نتيجة الاختبار</h2>
+<p id="resultName"></p>
+<div id="grade"></div>
+<p id="percentage"></p>
+<p id="resultMessage"></p>
+<p>تم حفظ نتيجتكِ بنجاح</p>
+<button onclick="location.reload()">العودة إلى الصفحة الرئيسية</button>
+</section>
 
-function tick(){
-let t=Math.max(0,Math.ceil((deadline-Date.now())/1000));
-document.getElementById("timer").textContent=
-"الوقت المتبقي: "+Math.floor(t/60)+":"+String(t%60).padStart(2,"0");
-if(t===0)finish();
-}
+<p id="status" role="status"></p>
 
-function finish(){
-if(finished)return;
-finished=true;
-clearInterval(clock);
-let score=0;
-questions.forEach((x,i)=>{
-let answer=document.querySelector(
-'input[name="q'+i+'"]:checked'
-);
-if(answer&&Number(answer.value)===x.c)score++;
-});
-document.getElementById("exam").hidden=true;
-document.getElementById("result").hidden=false;
-document.getElementById("score").textContent=
-score+" / "+questions.length+" — "+Math.round(score/questions.length*100)+"%";
-document.getElementById("message").textContent=
-score===questions.length?
-"أحسنتِ، بارك الله فيكِ":
-"بارك الله في جهودكِ، ووفقكِ للمزيد";
-window.scrollTo(0,0);
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</main>
+
+<footer>
+مجموعة وقري عينًا © 2026
+</footer>
+
 <script>
 const db = window.supabase.createClient(
-  "https://hadkrvkqmmpimqnrboym.supabase.co",
-  "sb_publishable__HrFXlj95XyTSlONB_Akzw_v62Sy2wl"
+"https://hadkrvkqmmpimqnrboym.supabase.co",
+"sb_publishable__HrFXlj95XyTSlONB_Akzw_v62Sy2wl"
 );
+
+const el = id => document.getElementById(id);
+
+let selectedExam = null;
+let questions = [];
+let answers = {};
+let studentName = "";
+let timerInterval = null;
+let deadline = 0;
+let submitting = false;
+let finished = false;
+let expired = false;
+
+function status(message){
+el("status").textContent = message;
+}
+
+function show(page){
+["home","registration","examPage","resultPage"]
+.forEach(id => el(id).hidden = id !== page);
+}
+
+async function loadExams(){
+status("");
+const {data,error} = await db.from("exams")
+.select("id,title,description,duration_minutes")
+.eq("is_active",true);
+
+if(error){
+el("examList").textContent = "تعذر تحميل الاختبارات";
+status(error.message);
+return;
+}
+
+const list = el("examList");
+list.replaceChildren();
+
+if(!data.length){
+list.textContent = "لا توجد اختبارات متاحة حاليًا";
+return;
+}
+
+data.forEach(exam => {
+const box = document.createElement("div");
+box.className = "card";
+
+const title = document.createElement("h3");
+title.textContent = exam.title;
+box.appendChild(title);
+
+const desc = document.createElement("p");
+desc.textContent = exam.description || "";
+box.appendChild(desc);
+
+const duration = document.createElement("p");
+duration.textContent = "مدة الاختبار: " +
+exam.duration_minutes + " دقيقة";
+box.appendChild(duration);
+
+const button = document.createElement("button");
+button.textContent = "الدخول إلى الاختبار";
+button.onclick = () => selectExam(exam);
+box.appendChild(button);
+
+list.appendChild(box);
+});
+}
+
+function selectExam(exam){
+selectedExam = exam;
+el("examTitle").textContent = exam.title;
+el("examDescription").textContent = exam.description || "";
+el("examDuration").textContent =
+"مدة الاختبار: " + exam.duration_minutes + " دقيقة";
+status("");
+show("registration");
+window.scrollTo(0,0);
+}
+
+function goHome(){
+show("home");
+status("");
+loadExams();
+}
+
+async function startExam(){
+studentName = el("studentName").value.trim();
+
+if(!studentName){
+status("يرجى كتابة اسم الطالبة");
+return;
+}
+
+el("startButton").disabled = true;
+
+try{
+const {data,error} = await db.from("questions")
+.select("id,question,options,position")
+.eq("exam_id",selectedExam.id)
+.order("position",{ascending:true});
+
+if(error) throw error;
+
+if(!data.length){
+status("لا توجد أسئلة في هذا الاختبار بعد");
+return;
+}
+
+questions = data;
+answers = {};
+finished = false;
+expired = false;
+
+el("currentTitle").textContent = selectedExam.title;
+el("studentLabel").textContent = "الطالبة: " + studentName;
+
+renderQuestions();
+updateProgress();
+
+deadline = Date.now() +
+Number(selectedExam.duration_minutes)*60000;
+
+show("examPage");
+status("");
+window.scrollTo(0,0);
+
+clearInterval(timerInterval);
+timerInterval = setInterval(updateTimer,1000);
+updateTimer();
+
+}catch(error){
+status(error.message || "تعذر بدء الاختبار");
+}finally{
+el("startButton").disabled = false;
+}
+}
+
+function renderQuestions(){
+const list = el("questions");
+list.replaceChildren();
+
+questions.forEach((q,i)=>{
+const box = document.createElement("div");
+box.className = "card";
+
+const title = document.createElement("h3");
+title.textContent = (i+1) + ". " + q.question;
+box.appendChild(title);
+
+q.options.forEach((option,j)=>{
+const label = document.createElement("label");
+label.className = "option";
+
+const radio = document.createElement("input");
+radio.type = "radio";
+radio.name = "question_" + q.id;
+radio.value = j;
+
+radio.onchange = ()=>{
+if(expired || finished || submitting) return;
+if(Date.now() >= deadline){
+updateTimer();
+return;
+}
+answers[q.id] = j;
+updateProgress();
+};
+
+const text = document.createElement("span");
+text.textContent = option;
+
+label.appendChild(radio);
+label.appendChild(text);
+box.appendChild(label);
+});
+
+list.appendChild(box);
+});
+}
+
+function updateProgress(){
+el("progress").textContent =
+"تمت الإجابة عن " +
+Object.keys(answers).length +
+" من " + questions.length + " سؤال";
+}
+
+function lockAnswers(locked){
+document.querySelectorAll("#questions input")
+.forEach(input => input.disabled = locked);
+}
+
+function updateTimer(){
+if(finished) return;
+
+const remaining = Math.max(
+0,Math.ceil((deadline-Date.now())/1000)
+);
+
+const minutes = Math.floor(remaining/60);
+const seconds = remaining%60;
+
+el("timer").textContent =
+"الوقت المتبقي: " +
+String(minutes).padStart(2,"0") + ":" +
+String(seconds).padStart(2,"0");
+
+if(remaining <= 60){
+el("timer").style.background = "#a34d40";
+}
+
+if(remaining === 0){
+clearInterval(timerInterval);
+expired = true;
+lockAnswers(true);
+submitExam(true);
+}
+}
+
+async function submitExam(automatic){
+if(submitting || finished) return;
+
+if(Date.now() >= deadline){
+expired = true;
+lockAnswers(true);
+clearInterval(timerInterval);
+}
+
+if(!automatic && !expired){
+if(!confirm("هل أنتِ متأكدة من تسليم الاختبار؟"))
+return;
+}
+
+submitting = true;
+lockAnswers(true);
+el("submitButton").disabled = true;
+status("جارٍ تصحيح الاختبار وحفظ النتيجة...");
+
+try{
+const {data,error} = await db.rpc("submit_exam",{
+p_exam_id:selectedExam.id,
+p_student_name:studentName,
+p_answers:answers
+});
+
+if(error) throw error;
+
+finished = true;
+clearInterval(timerInterval);
+
+const score = Number(data.score);
+const total = Number(data.total);
+const percent = Math.round(score/total*100);
+
+el("resultName").textContent = studentName;
+el("grade").textContent = score + " / " + total;
+el("percentage").textContent =
+"النسبة المئوية: " + percent + "%";
+
+el("resultMessage").textContent =
+percent >= 90 ? "ممتاز، بارك الله فيكِ" :
+percent >= 75 ? "أحسنتِ، زادكِ الله علمًا" :
+percent >= 50 ? "وفقكِ الله وزادكِ علمًا" :
+"واصلي المراجعة، وفقكِ الله";
+
+status("");
+show("resultPage");
+window.scrollTo(0,0);
+
+}catch(error){
+status("تعذر تأكيد حفظ النتيجة: " + error.message);
+el("submitButton").textContent = "إعادة محاولة التسليم";
+}finally{
+submitting = false;
+el("submitButton").disabled = finished;
+if(!finished && !expired) lockAnswers(false);
+}
+}
+
+loadExams();
 </script>
-  </body>
+</body>
 </html>
