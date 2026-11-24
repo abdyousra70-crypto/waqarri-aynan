@@ -1,0 +1,238 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة إدارة وقري عينًا</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{
+background:#f5efe5;
+color:#665139;
+font-family:Tahoma,Arial,sans-serif;
+margin:0;
+line-height:1.8;
+}
+header{
+background:#e6d7bd;
+padding:30px 15px;
+text-align:center;
+}
+h1{color:#896b39}
+main{
+max-width:750px;
+margin:auto;
+padding:20px;
+}
+.card{
+background:#fffdf8;
+border:1px solid #d8c5a4;
+border-radius:18px;
+padding:22px;
+margin-bottom:20px;
+}
+input,textarea,button{
+width:100%;
+padding:13px;
+margin:8px 0;
+border-radius:10px;
+font-size:16px;
+font-family:inherit;
+}
+input,textarea{
+border:1px solid #d8c5a4;
+background:white;
+}
+button{
+background:#967b4e;
+color:white;
+border:0;
+cursor:pointer;
+}
+button:disabled{opacity:.5}
+[hidden]{display:none!important}
+#status{white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header>
+<p>﷽</p>
+<h1>مجموعة وقري عينًا</h1>
+<p>لوحة الإدارة</p>
+</header>
+<main>
+
+<section id="login" class="card">
+<h2>دخول المشرفة</h2>
+<input id="email" type="email" placeholder="البريد الإلكتروني">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button onclick="signIn()">تسجيل الدخول</button>
+</section>
+
+<section id="dashboard" hidden>
+<div class="card">
+<h2>مرحبًا بكِ في لوحة الإدارة</h2>
+<button onclick="signOut()">تسجيل الخروج</button>
+</div>
+
+<div class="card">
+<h2>إنشاء اختبار جديد</h2>
+<input id="title" placeholder="اسم الاختبار">
+<textarea id="description" placeholder="وصف الاختبار"></textarea>
+<label>مدة الاختبار بالدقائق</label>
+<input id="duration" type="number" min="1" value="30">
+<button id="create" onclick="createExam()">حفظ الاختبار</button>
+</div>
+
+<div class="card">
+<h2>الاختبارات الموجودة</h2>
+<div id="exams"></div>
+<button onclick="loadExams()">تحديث القائمة</button>
+</div>
+</section>
+
+<p id="status" role="status"></p>
+</main>
+
+<script>
+const db = window.supabase.createClient(
+"https://hadkrvkqmmpimqnrboym.supabase.co",
+"sb_publishable__HrFXlj95XyTSlONB_Akzw_v62Sy2wl"
+);
+
+const el = id => document.getElementById(id);
+
+function status(message){
+el("status").textContent=message;
+}
+
+async function signIn(){
+status("جارٍ تسجيل الدخول...");
+const {data,error}=await db.auth.signInWithPassword({
+email:el("email").value.trim(),
+password:el("password").value
+});
+if(error){
+status("تعذر تسجيل الدخول: "+error.message);
+return;
+}
+el("password").value="";
+await checkAdmin(data.user);
+}
+
+async function checkAdmin(user){
+if(!user)return;
+const {data,error}=await db.from("admins")
+.select("user_id")
+.eq("user_id",user.id)
+.maybeSingle();
+
+if(error||!data){
+await db.auth.signOut();
+status("تعذر التحقق من صلاحية المشرفة.");
+return;
+}
+el("login").hidden=true;
+el("dashboard").hidden=false;
+status("");
+await loadExams();
+}
+
+async function signOut(){
+await db.auth.signOut();
+location.reload();
+}
+
+async function createExam(){
+const title=el("title").value.trim();
+const duration=Number(el("duration").value);
+
+if(!title||!Number.isInteger(duration)||duration<1){
+status("أدخلي اسم الاختبار ومدة صحيحة.");
+return;
+}
+
+el("create").disabled=true;
+
+const {error}=await db.from("exams").insert({
+title:title,
+description:el("description").value,
+duration_minutes:duration,
+is_active:false
+});
+
+el("create").disabled=false;
+
+if(error){
+status(error.message);
+return;
+}
+
+el("title").value="";
+el("description").value="";
+status("تم حفظ الاختبار بنجاح");
+await loadExams();
+}
+
+async function loadExams(){
+const {data,error}=await db.from("exams")
+.select("*")
+.order("created_at",{ascending:false});
+
+if(error){
+status(error.message);
+return;
+}
+
+const list=el("exams");
+list.replaceChildren();
+
+if(!data.length){
+list.textContent="لا توجد اختبارات بعد";
+return;
+}
+
+for(const exam of data){
+const box=document.createElement("div");
+box.className="card";
+
+const heading=document.createElement("h3");
+heading.textContent=exam.title;
+box.appendChild(heading);
+
+const info=document.createElement("p");
+info.textContent="المدة: "+exam.duration_minutes+" دقيقة — "+(exam.is_active?"مفتوح":"مغلق");
+box.appendChild(info);
+
+const toggle=document.createElement("button");
+toggle.textContent=exam.is_active?"إغلاق الاختبار":"فتح الاختبار";
+toggle.onclick=async()=>{
+const {error}=await db.from("exams")
+.update({is_active:!exam.is_active})
+.eq("id",exam.id);
+if(error)status(error.message);
+else await loadExams();
+};
+box.appendChild(toggle);
+
+const remove=document.createElement("button");
+remove.textContent="حذف الاختبار";
+remove.onclick=async()=>{
+if(!confirm("هل أنتِ متأكدة من حذف الاختبار؟"))return;
+const {error}=await db.from("exams")
+.delete().eq("id",exam.id);
+if(error)status(error.message);
+else await loadExams();
+};
+box.appendChild(remove);
+list.appendChild(box);
+}
+}
+
+db.auth.getUser().then(({data})=>{
+if(data.user)checkAdmin(data.user);
+});
+</script>
+</body>
+</html>
