@@ -1268,5 +1268,90 @@ changeType();
 
 })();
 </script>
+ <script>
+(()=>{
+const previousLoadQuestions=loadQuestions;
+
+loadQuestions=async function(){
+
+if(!selectedExam)return;
+
+const exam=selectedExam;
+
+await previousLoadQuestions();
+
+const {data,error}=await db
+.from("questions")
+.select("id,position")
+.eq("exam_id",exam.id)
+.order("position");
+
+if(error){
+el("questionStatus").textContent=
+error.message;
+return;
+}
+
+if(selectedExam.id!==exam.id)return;
+
+const cards=el("questionList").children;
+
+data.forEach((q,i)=>{
+
+if(!cards[i])return;
+
+const button=document.createElement("button");
+
+button.textContent="حذف السؤال";
+button.style.background="#a34d40";
+button.disabled=exam.is_active;
+
+button.onclick=async()=>{
+
+if(!confirm(
+"هل أنتِ متأكدة من حذف هذا السؤال نهائيًا؟"
+))return;
+
+button.disabled=true;
+
+try{
+
+const {data,error}=await db.rpc(
+"delete_exam_question",{
+p_question_id:q.id
+});
+
+if(error)throw error;
+
+if(!data){
+throw new Error("تعذر حذف السؤال");
+}
+
+el("questionStatus").textContent=
+"تم حذف السؤال بنجاح ✓";
+
+await loadQuestions();
+
+}catch(error){
+
+el("questionStatus").textContent=
+error.message;
+
+}finally{
+
+button.disabled=exam.is_active;
+
+}
+
+};
+
+cards[i].appendChild(button);
+
+});
+
+};
+
+})();
+</script>
 </body>
 </html>
