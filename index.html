@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -99,6 +98,9 @@ padding:25px;
 color:#8b7961;
 }
 [hidden]{display:none!important}
+#status{
+white-space:pre-wrap;
+}
 </style>
 </head>
 <body>
@@ -123,12 +125,26 @@ color:#8b7961;
 <h2 id="examTitle"></h2>
 <p id="examDescription"></p>
 <p id="examDuration"></p>
+
 <label for="studentName">اسم الطالبة الكامل</label>
 <input type="text" id="studentName"
 maxlength="150"
 placeholder="اكتبي اسمكِ الكامل">
-<button id="startButton" onclick="startExam()">ابدئي الاختبار</button>
-<button onclick="goHome()">العودة</button>
+
+<label for="accessCode">رمز الدخول الخاص بكِ</label>
+<input type="text" id="accessCode"
+dir="ltr"
+autocomplete="off"
+autocapitalize="characters"
+spellcheck="false"
+placeholder="رمز الدخول">
+
+<p>تنبيه: رمز الدخول صالح لمحاولة واحدة فقط. لا تغلقي الصفحة أثناء الاختبار.</p>
+
+<button id="startButton" onclick="startExam()">
+ابدئي الاختبار
+</button>
+<button id="backButton" onclick="goHome()">العودة</button>
 </section>
 
 <section id="examPage" hidden>
@@ -151,11 +167,12 @@ placeholder="اكتبي اسمكِ الكامل">
 <p id="percentage"></p>
 <p id="resultMessage"></p>
 <p>تم حفظ نتيجتكِ بنجاح</p>
-<button onclick="location.reload()">العودة إلى الصفحة الرئيسية</button>
+<button onclick="location.reload()">
+العودة إلى الصفحة الرئيسية
+</button>
 </section>
 
 <p id="status" role="status"></p>
-
 </main>
 
 <footer>
@@ -174,11 +191,13 @@ let selectedExam = null;
 let questions = [];
 let answers = {};
 let studentName = "";
+let accessCode = "";
 let timerInterval = null;
 let deadline = 0;
 let submitting = false;
 let finished = false;
 let expired = false;
+let starting = false;
 
 function status(message){
 el("status").textContent = message;
@@ -191,12 +210,14 @@ function show(page){
 
 async function loadExams(){
 status("");
+
 const {data,error} = await db.from("exams")
 .select("id,title,description,duration_minutes")
 .eq("is_active",true);
 
 if(error){
-el("examList").textContent = "تعذر تحميل الاختبارات";
+el("examList").textContent =
+"تعذر تحميل الاختبارات";
 status(error.message);
 return;
 }
@@ -205,7 +226,8 @@ const list = el("examList");
 list.replaceChildren();
 
 if(!data.length){
-list.textContent = "لا توجد اختبارات متاحة حاليًا";
+list.textContent =
+"لا توجد اختبارات متاحة حاليًا";
 return;
 }
 
@@ -222,7 +244,8 @@ desc.textContent = exam.description || "";
 box.appendChild(desc);
 
 const duration = document.createElement("p");
-duration.textContent = "مدة الاختبار: " +
+duration.textContent =
+"مدة الاختبار: " +
 exam.duration_minutes + " دقيقة";
 box.appendChild(duration);
 
@@ -238,56 +261,92 @@ list.appendChild(box);
 function selectExam(exam){
 selectedExam = exam;
 el("examTitle").textContent = exam.title;
-el("examDescription").textContent = exam.description || "";
+el("examDescription").textContent =
+exam.description || "";
 el("examDuration").textContent =
-"مدة الاختبار: " + exam.duration_minutes + " دقيقة";
+"مدة الاختبار: " +
+exam.duration_minutes + " دقيقة";
+el("accessCode").value = "";
 status("");
 show("registration");
 window.scrollTo(0,0);
 }
 
 function goHome(){
+if(starting) return;
 show("home");
 status("");
 loadExams();
 }
 
 async function startExam(){
+if(starting || !selectedExam) return;
+
 studentName = el("studentName").value.trim();
+accessCode = el("accessCode").value
+.trim().toUpperCase();
 
 if(!studentName){
 status("يرجى كتابة اسم الطالبة");
 return;
 }
 
+if(!accessCode){
+status("يرجى إدخال رمز الدخول الخاص بكِ");
+return;
+}
+
+starting = true;
 el("startButton").disabled = true;
+el("backButton").disabled = true;
+el("studentName").disabled = true;
+el("accessCode").disabled = true;
+
+status("جارٍ التحقق من الاختبار ورمز الدخول...");
 
 try{
-const {data,error} = await db.from("questions")
+
+const {data:questionData,error:questionError}
+= await db.from("questions")
 .select("id,question,options,position")
 .eq("exam_id",selectedExam.id)
 .order("position",{ascending:true});
 
-if(error) throw error;
+if(questionError) throw questionError;
 
-if(!data.length){
-status("لا توجد أسئلة في هذا الاختبار بعد");
-return;
+if(!questionData.length){
+throw new Error("لا توجد أسئلة في الاختبار");
 }
 
-questions = data;
+const {data,error} = await db.rpc("start_exam",{
+p_exam_id:selectedExam.id,
+p_student_name:studentName,
+p_code:accessCode
+});
+
+if(error) throw error;
+
+deadline = new Date(data.expires_at).getTime();
+
+if(!Number.isFinite(deadline)){
+throw new Error("تعذر تحديد وقت الاختبار");
+}
+
+questions = questionData;
 answers = {};
 finished = false;
 expired = false;
 
-el("currentTitle").textContent = selectedExam.title;
-el("studentLabel").textContent = "الطالبة: " + studentName;
+el("currentTitle").textContent =
+selectedExam.title;
+
+el("studentLabel").textContent =
+"الطالبة: " + studentName;
+
+el("timer").style.background = "#896b39";
 
 renderQuestions();
 updateProgress();
-
-deadline = Date.now() +
-Number(selectedExam.duration_minutes)*60000;
 
 show("examPage");
 status("");
@@ -300,7 +359,11 @@ updateTimer();
 }catch(error){
 status(error.message || "تعذر بدء الاختبار");
 }finally{
+starting = false;
 el("startButton").disabled = false;
+el("backButton").disabled = false;
+el("studentName").disabled = false;
+el("accessCode").disabled = false;
 }
 }
 
@@ -313,7 +376,7 @@ const box = document.createElement("div");
 box.className = "card";
 
 const title = document.createElement("h3");
-title.textContent = (i+1) + ". " + q.question;
+title.textContent = (i+1)+". "+q.question;
 box.appendChild(title);
 
 q.options.forEach((option,j)=>{
@@ -322,15 +385,17 @@ label.className = "option";
 
 const radio = document.createElement("input");
 radio.type = "radio";
-radio.name = "question_" + q.id;
+radio.name = "question_"+q.id;
 radio.value = j;
 
 radio.onchange = ()=>{
 if(expired || finished || submitting) return;
+
 if(Date.now() >= deadline){
 updateTimer();
 return;
 }
+
 answers[q.id] = j;
 updateProgress();
 };
@@ -349,9 +414,9 @@ list.appendChild(box);
 
 function updateProgress(){
 el("progress").textContent =
-"تمت الإجابة عن " +
-Object.keys(answers).length +
-" من " + questions.length + " سؤال";
+"تمت الإجابة عن "+
+Object.keys(answers).length+
+" من "+questions.length+" سؤال";
 }
 
 function lockAnswers(locked){
@@ -370,8 +435,8 @@ const minutes = Math.floor(remaining/60);
 const seconds = remaining%60;
 
 el("timer").textContent =
-"الوقت المتبقي: " +
-String(minutes).padStart(2,"0") + ":" +
+"الوقت المتبقي: "+
+String(minutes).padStart(2,"0")+":"+
 String(seconds).padStart(2,"0");
 
 if(remaining <= 60){
@@ -403,12 +468,15 @@ return;
 submitting = true;
 lockAnswers(true);
 el("submitButton").disabled = true;
+
 status("جارٍ تصحيح الاختبار وحفظ النتيجة...");
 
 try{
-const {data,error} = await db.rpc("submit_exam",{
+
+const {data,error} = await db.rpc(
+"submit_exam_with_code",{
 p_exam_id:selectedExam.id,
-p_student_name:studentName,
+p_code:accessCode,
 p_answers:answers
 });
 
@@ -422,9 +490,10 @@ const total = Number(data.total);
 const percent = Math.round(score/total*100);
 
 el("resultName").textContent = studentName;
-el("grade").textContent = score + " / " + total;
+el("grade").textContent = score+" / "+total;
+
 el("percentage").textContent =
-"النسبة المئوية: " + percent + "%";
+"النسبة المئوية: "+percent+"%";
 
 el("resultMessage").textContent =
 percent >= 90 ? "ممتاز، بارك الله فيكِ" :
@@ -432,19 +501,30 @@ percent >= 75 ? "أحسنتِ، زادكِ الله علمًا" :
 percent >= 50 ? "وفقكِ الله وزادكِ علمًا" :
 "واصلي المراجعة، وفقكِ الله";
 
+accessCode = "";
+el("accessCode").value = "";
+
 status("");
 show("resultPage");
 window.scrollTo(0,0);
 
 }catch(error){
-status("تعذر تأكيد حفظ النتيجة: " + error.message);
-el("submitButton").textContent = "إعادة محاولة التسليم";
+status("تعذر تأكيد حفظ النتيجة: "+error.message);
+el("submitButton").textContent =
+"إعادة محاولة التسليم";
 }finally{
 submitting = false;
 el("submitButton").disabled = finished;
 if(!finished && !expired) lockAnswers(false);
 }
 }
+
+window.addEventListener("beforeunload",event=>{
+if(!el("examPage").hidden && !finished){
+event.preventDefault();
+event.returnValue = "";
+}
+});
 
 loadExams();
 </script>
