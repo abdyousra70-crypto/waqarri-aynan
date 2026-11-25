@@ -986,5 +986,61 @@ lockAnswers(false);
 
 })();
 </script>
+  
+<!-- مقدمة مركز عباد الرحمن -->
+<div id="centerIntro">
+  <img
+    src="5bd0d512-2e49-429d-b8aa-c482f13c0da9.jpeg"
+    alt="مركز عباد الرحمن">
+</div>
+
+<style>
+#centerIntro {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  background: #fffdf7;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: introExit 1s ease 5s forwards;
+}
+
+#centerIntro img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: introAppear 2s ease forwards;
+}
+
+@keyframes introAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes introExit {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+</style>
+
+<script>
+setTimeout(function () {
+  const intro = document.getElementById("centerIntro");
+  if (intro) intro.remove();
+}, 6000);
+</script>
+
 </body>
 </html>
