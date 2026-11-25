@@ -174,6 +174,44 @@ header h1::after {
   margin-top: 8px;
 }
 
+/* تصميم بطاقات الاختبارات */
+#examList > div {
+  background: linear-gradient(
+    145deg, #ffffff, #faf5e9
+  );
+  border: 1px solid #d8c7a3;
+  border-radius: 20px;
+  padding: 22px;
+  margin: 18px 0;
+  text-align: center;
+  box-shadow: 0 5px 15px #896b3915;
+}
+
+#examList h2,
+#examList h3 {
+  color: #896b39;
+  margin: 12px 0;
+}
+
+#examList > div::before {
+  content: "📖";
+  display: block;
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+#examList p {
+  line-height: 1.7;
+  margin: 10px 0;
+}
+
+#examList button {
+  width: 100%;
+  padding: 14px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px #896b3925;
+}
+
 </style>
 </head>
 <body>
