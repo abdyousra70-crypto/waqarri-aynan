@@ -141,6 +141,39 @@ header h1 {
   color: white;
 }
 
+/* زخارف إسلامية ذهبية */
+header {
+  position: relative;
+  overflow: hidden;
+}
+
+header::before,
+header::after {
+  content: "۞";
+  position: absolute;
+  top: 15px;
+  font-size: 85px;
+  color: #b49a65;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+header::before {
+  right: 12px;
+}
+
+header::after {
+  left: 12px;
+}
+
+header h1::after {
+  content: "❧ ─── ۞ ─── ❧";
+  display: block;
+  font-size: 18px;
+  color: #b49a65;
+  margin-top: 8px;
+}
+
 </style>
 </head>
 <body>
