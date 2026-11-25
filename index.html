@@ -1076,6 +1076,48 @@ el("progress").textContent=
 "تمت الإجابة عن "+completed+
 " من "+total+" خانة إجابة";
 
+const percent = total > 0
+  ? Math.round((completed / total) * 100)
+  : 0;
+
+let bar = document.getElementById("examProgressBar");
+
+if (!bar) {
+  const wrapper = document.createElement("div");
+
+  wrapper.innerHTML = `
+    <div id="examProgressPercent"
+      style="text-align:center;color:#896b39;
+      font-weight:bold;margin:10px 0;">
+      0%
+    </div>
+
+    <div style="background:#e7deca;
+      height:14px;border-radius:20px;
+      overflow:hidden;">
+
+      <div id="examProgressBar"
+        style="height:100%;width:0%;
+        background:linear-gradient(
+          90deg,#b49a65,#896b39
+        );
+        border-radius:20px;
+        transition:width 0.4s ease;">
+      </div>
+
+    </div>
+  `;
+
+  el("progress").after(wrapper);
+  bar = document.getElementById("examProgressBar");
+}
+
+bar.style.width = percent + "%";
+
+document.getElementById(
+  "examProgressPercent"
+).textContent = percent + "%";
+
 };
 
 const previousSubmit=submitExam;
