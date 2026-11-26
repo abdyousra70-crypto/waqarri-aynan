@@ -98,6 +98,37 @@ input:focus, select:focus, textarea:focus {
   border-color: #b99a50;
   box-shadow: 0 0 0 3px rgba(185,154,80,0.15);
 }
+ .statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statBox {
+  background: linear-gradient(145deg, #fffdf8, #f5eddf);
+  border: 1px solid #d8c7a3;
+  border-radius: 16px;
+  padding: 18px 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(137,107,57,0.08);
+}
+
+.statBox div {
+  font-size: 28px;
+}
+
+.statBox strong {
+  display: block;
+  font-size: 30px;
+  color: #896b39;
+  margin: 5px 0;
+}
+
+.statBox span {
+  display: block;
+  font-size: 13px;
+  color: #665139;
+}
 </style>
 </head>
 <body>
@@ -123,7 +154,39 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <h2>مرحبًا بكِ في لوحة الإدارة</h2>
 <button onclick="signOut()">تسجيل الخروج</button>
 </div>
+<div class="card">
+  <h2 style="text-align:center;color:#896b39;">
+    ✦ إحصائيات المنصة ✦
+  </h2>
 
+  <div class="statsGrid">
+
+    <div class="statBox">
+      <div>📚</div>
+      <strong id="statExams">—</strong>
+      <span>إجمالي الاختبارات</span>
+    </div>
+
+    <div class="statBox">
+      <div>📋</div>
+      <strong id="statPublished">—</strong>
+      <span>الاختبارات المنشورة</span>
+    </div>
+
+    <div class="statBox">
+      <div>👥</div>
+      <strong id="statStudents">—</strong>
+      <span>عدد المشاركات</span>
+    </div>
+
+    <div class="statBox">
+      <div>📊</div>
+      <strong id="statAverage">—</strong>
+      <span>متوسط النتائج</span>
+    </div>
+
+  </div>
+</div>
 <div class="card">
 <h2>إنشاء اختبار جديد</h2>
 <input id="title" placeholder="اسم الاختبار">
@@ -232,7 +295,8 @@ if(error){
 status(error.message);
 return;
 }
-
+el("statExams").textContent = data.length;
+el("statPublished").textContent = data.filter(exam => exam.is_active === true).length;
 const list=el("exams");
 list.replaceChildren();
 
@@ -579,7 +643,13 @@ async function loadResults(){
       ? Math.round(r.score/r.total_questions*100)
       : 0
   }));
+if (!select.value) {
+  el("statStudents").textContent = savedResults.length;
 
+  el("statAverage").textContent = savedResults.length
+    ? Math.round(savedResults.reduce((sum, r) => sum + r.percentage, 0) / savedResults.length) + "%"
+    : "—";
+}
   list.replaceChildren();
 
   el("resultsCount").textContent =
