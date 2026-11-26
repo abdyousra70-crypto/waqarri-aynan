@@ -1279,7 +1279,37 @@ lockAnswers(false);
   }
 }
 </style>
+<script>
+function playWelcomeVoice() {
+  if (!("speechSynthesis" in window)) return;
 
+  const voice = new SpeechSynthesisUtterance(
+    "مركز عباد الرحمن لإقراء وتحفيظ القرآن الكريم"
+  );
+
+  voice.lang = "ar-SA";
+  voice.rate = 0.85;
+  voice.pitch = 0.8;
+  voice.volume = 1;
+
+  const voices = speechSynthesis.getVoices();
+
+  const maleVoice = voices.find(v =>
+    v.lang.startsWith("ar") &&
+    /Majed|Maged|Naayf|Male/i.test(v.name)
+  );
+
+  if (maleVoice) voice.voice = maleVoice;
+
+  speechSynthesis.speak(voice);
+}
+
+document.addEventListener(
+  "pointerdown",
+  playWelcomeVoice,
+  { once: true }
+);
+</script>
 <script>
 setTimeout(function () {
   const intro = document.getElementById("centerIntro");
