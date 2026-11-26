@@ -703,9 +703,9 @@ if (sortType === "highest") {
 } else if (sortType === "lowest") {
   savedResults.sort((a,b) => a.percentage - b.percentage);
 } else if (sortType === "oldest") {
-  savedResults.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  savedResults.sort((a,b) => new Date(a.submitted_at) - new Date(b.submitted_at));
 } else {
-  savedResults.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  savedResults.sort((a,b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 }
  const percentages = savedResults.map(r => r.percentage);
 const count = percentages.length;
