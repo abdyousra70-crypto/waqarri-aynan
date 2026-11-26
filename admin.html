@@ -597,6 +597,13 @@ border-radius:10px;
 font-size:16px;background:white">
 <option value="">جميع الاختبارات</option>
 </select>
+<label>البحث باسم الطالبة</label>
+<input type="search" id="resultsSearch"
+placeholder="اكتبي اسم الطالبة..."
+style="width:100%;padding:13px;
+border:1px solid #d8c5a4;
+border-radius:10px;
+font-size:16px;background:white">
 <label>ترتيب النتائج</label>
 <select id="resultsSort"
 style="width:100%;padding:13px;
@@ -696,6 +703,13 @@ async function loadResults(){
       ? Math.round(r.score/r.total_questions*100)
       : 0
   }));
+ const searchName = el("resultsSearch").value.trim().toLowerCase();
+
+if (searchName) {
+  savedResults = savedResults.filter(r =>
+    (r.student_name || "").toLowerCase().includes(searchName)
+  );
+}
  const sortType = el("resultsSort").value;
 
 if (sortType === "highest") {
