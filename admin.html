@@ -129,6 +129,27 @@ input:focus, select:focus, textarea:focus {
   font-size: 13px;
   color: #665139;
 }
+ .quickGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quickGrid button {
+  width: 100%;
+  min-height: 75px;
+  background: linear-gradient(145deg, #fffdf8, #f3ead8);
+  color: #896b39;
+  border: 1px solid #d8c7a3;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.quickGrid button:active {
+  transform: scale(0.97);
+}
 </style>
 </head>
 <body>
@@ -154,7 +175,26 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <h2>مرحبًا بكِ في لوحة الإدارة</h2>
 <button onclick="signOut()">تسجيل الخروج</button>
 </div>
-<div class="card">
+ <div class="card" id="quickNav">
+  <h2 style="text-align:center;color:#896b39;">
+    ✦ الإدارة السريعة ✦
+  </h2>
+
+  <div class="quickGrid">
+    <button onclick="goToAdmin('adminStats')">📊 الإحصائيات</button>
+
+    <button onclick="goToAdmin('adminCreate')">➕ إنشاء اختبار</button>
+
+    <button onclick="goToAdmin('exams')">📚 إدارة الاختبارات</button>
+
+    <button onclick="goToAdmin('adminCodes')">🔑 رموز الدخول</button>
+
+    <button onclick="goToAdmin('adminQuestions')">📝 إدارة الأسئلة</button>
+
+    <button onclick="goToAdmin('resultsList')">🏆 نتائج الطالبات</button>
+  </div>
+</div>
+<div class="card" id="adminStats">
   <h2 style="text-align:center;color:#896b39;">
     ✦ إحصائيات المنصة ✦
   </h2>
@@ -187,7 +227,7 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 
   </div>
 </div>
-<div class="card">
+<div class="card" id="adminCreate">
 <h2>إنشاء اختبار جديد</h2>
 <input id="title" placeholder="اسم الاختبار">
 <textarea id="description" placeholder="وصف الاختبار"></textarea>
@@ -377,6 +417,7 @@ loadExams = async function(){
 
 const panel = document.createElement("div");
 panel.className = "card";
+  panel.id = "adminQuestions";
 panel.hidden = true;
 panel.innerHTML = `
 <h2 id="questionExamTitle"></h2>
@@ -759,7 +800,7 @@ el("resultsExam").addEventListener("change",()=>{
 (()=>{
 const card = document.createElement("div");
 card.className = "card";
-
+card.id = "adminCodes";
 card.innerHTML = `
 <h2>إدارة رموز دخول الطالبات</h2>
 
@@ -2106,6 +2147,24 @@ async function showResultDetails(resultId, box){
 
   }
 
+}
+</script>
+ <script>
+function goToAdmin(id) {
+  let target = document.getElementById(id);
+
+  if (id === "adminQuestions" &&
+      (!target || target.hidden)) {
+    alert("اختاري الاختبار أولاً ثم اضغطي على إدارة الأسئلة");
+    target = document.getElementById("exams");
+  }
+
+  if (target) {
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
 }
 </script>
 </body>
