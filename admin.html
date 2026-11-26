@@ -587,7 +587,7 @@ resultsPanel.className = "card";
 
 resultsPanel.innerHTML = `
 <h2>سجل نتائج الطالبات</h2>
-
+<div id="resultsSummary" class="statsGrid"></div>
 <label>اختاري الاختبار</label>
 
 <select id="resultsExam"
@@ -686,6 +686,34 @@ async function loadResults(){
       ? Math.round(r.score/r.total_questions*100)
       : 0
   }));
+ const percentages = savedResults.map(r => r.percentage);
+const count = percentages.length;
+const average = count
+  ? Math.round(percentages.reduce((a,b) => a+b,0)/count)
+  : 0;
+
+el("resultsSummary").innerHTML = `
+<div class="statBox">
+  <div>👥</div>
+  <strong>${count}</strong>
+  <span>عدد المشاركات</span>
+</div>
+<div class="statBox">
+  <div>📊</div>
+  <strong>${count ? average+"%" : "—"}</strong>
+  <span>متوسط النتائج</span>
+</div>
+<div class="statBox">
+  <div>🏆</div>
+  <strong>${count ? Math.max(...percentages)+"%" : "—"}</strong>
+  <span>أعلى نسبة</span>
+</div>
+<div class="statBox">
+  <div>📉</div>
+  <strong>${count ? Math.min(...percentages)+"%" : "—"}</strong>
+  <span>أقل نسبة</span>
+</div>
+`;
 if (!select.value) {
   el("statStudents").textContent = savedResults.length;
 
