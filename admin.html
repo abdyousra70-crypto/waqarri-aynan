@@ -597,7 +597,17 @@ border-radius:10px;
 font-size:16px;background:white">
 <option value="">جميع الاختبارات</option>
 </select>
-
+<label>ترتيب النتائج</label>
+<select id="resultsSort"
+style="width:100%;padding:13px;
+border:1px solid #d8c5a4;
+border-radius:10px;
+font-size:16px;background:white">
+<option value="newest">أحدث مشاركة</option>
+<option value="oldest">أقدم مشاركة</option>
+<option value="highest">أعلى درجة</option>
+<option value="lowest">أقل درجة</option>
+</select>
 <button onclick="loadResults()">
 عرض وتحديث النتائج
 </button>
@@ -686,6 +696,17 @@ async function loadResults(){
       ? Math.round(r.score/r.total_questions*100)
       : 0
   }));
+ const sortType = el("resultsSort").value;
+
+if (sortType === "highest") {
+  savedResults.sort((a,b) => b.percentage - a.percentage);
+} else if (sortType === "lowest") {
+  savedResults.sort((a,b) => a.percentage - b.percentage);
+} else if (sortType === "oldest") {
+  savedResults.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+} else {
+  savedResults.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+}
  const percentages = savedResults.map(r => r.percentage);
 const count = percentages.length;
 const average = count
