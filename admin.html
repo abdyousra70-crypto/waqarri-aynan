@@ -2159,12 +2159,39 @@ function goToAdmin(id) {
     target = document.getElementById("exams");
   }
 
-  if (target) {
-    target.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
+  if (!target) return;
+
+  const dashboard = document.getElementById("dashboard");
+  const cards = Array.from(dashboard.children);
+  const selected = cards.find(card =>
+    card === target || card.contains(target)
+  );
+
+  if (!selected) return;
+
+  cards.forEach(card => {
+    card.style.display =
+      card === selected ? "" : "none";
+  });
+
+  let back = document.getElementById("adminBack");
+
+  if (!back) {
+    back = document.createElement("button");
+    back.id = "adminBack";
+    back.textContent = "↩ العودة إلى الإدارة السريعة";
+    back.onclick = function () {
+      cards.forEach(card => {
+        card.style.display =
+          card.id === "quickNav" ? "" : "none";
+      });
+      back.remove();
+      window.scrollTo(0, 0);
+    };
   }
+
+  dashboard.prepend(back);
+  window.scrollTo(0, 0);
 }
 </script>
 </body>
