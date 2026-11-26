@@ -185,7 +185,7 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 
     <button onclick="goToAdmin('adminCreate')">➕ إنشاء اختبار</button>
 
-    <button onclick="goToAdmin('exams')">📚 إدارة الاختبارات</button>
+  <button onclick="goToAdmin('adminExams')">📚 الاختبارات الموجودة</button>
 
     <button onclick="goToAdmin('adminCodes')">🔑 رموز الدخول</button>
 
@@ -236,7 +236,7 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <button id="create" onclick="createExam()">حفظ الاختبار</button>
 </div>
 
-<div class="card">
+<div class="card" id="adminExams">
 <h2>الاختبارات الموجودة</h2>
 <div id="exams"></div>
 <button onclick="loadExams()">تحديث القائمة</button>
