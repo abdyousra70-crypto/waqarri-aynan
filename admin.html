@@ -453,7 +453,7 @@ onclick="saveQuestion()">حفظ السؤال</button>
 <h3>الأسئلة الموجودة</h3>
 <div id="questionList"></div>
 
-<button onclick="panel.hidden=true">
+<button onclick="panel.hidden=true;goToAdmin('adminExams')">
 إغلاق إدارة الأسئلة
 </button>
 `;
@@ -464,7 +464,8 @@ let selectedExam = null;
 
 async function manageQuestions(exam){
   selectedExam = exam;
-  panel.hidden = false;
+ panel.hidden = false;
+goToAdmin("adminQuestions");
 
   el("questionExamTitle").textContent =
     exam.title;
