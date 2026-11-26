@@ -298,7 +298,19 @@ placeholder="رمز الدخول">
 </h2>
 
 <p id="resultName" style="font-size:20px;font-weight:bold;color:#896b39;"></p>
+<div style="background:#f5eddf;border:1px solid #d8c49e;border-radius:15px;padding:12px;margin:15px 0;color:#896b39;">
 
+<p style="margin:5px 0;font-size:17px;">
+📖 <span id="resultExamTitle"></span>
+</p>
+
+<div style="height:1px;background:#d8c49e;margin:10px 0;"></div>
+
+<p style="margin:5px 0;font-size:15px;">
+📅 <span id="resultDate"></span>
+</p>
+
+</div>
 <div style="position:relative;width:170px;height:170px;margin:25px auto;background:#fffaf0;border-radius:50%;box-shadow:0 5px 20px #b99a5030;">
 
 <svg viewBox="0 0 170 170" style="position:absolute;inset:0;width:100%;height:100%;">
@@ -646,6 +658,16 @@ const total = Number(data.total);
 const percent = Math.round(score/total*100);
 
 el("resultName").textContent = studentName;
+  el("resultExamTitle").textContent =
+  el("currentTitle").textContent;
+
+el("resultDate").textContent =
+  new Date().toLocaleDateString("ar-EG", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    calendar: "gregory"
+  });
 el("grade").textContent = score+" / "+total;
 
 el("percentage").textContent =
