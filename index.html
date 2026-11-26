@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>مجموعة وقري عينًا</title>
+<title>مركز عباد الرحمن لإقراء وتحفيظ القرآن الكريم</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -233,13 +233,20 @@ header h1::after {
   ">
 
 <p style="font-size:25px">﷽</p>
-<h1>مجموعة وقري عينًا</h1>
-<p>منصة الاختبارات الشرعية والقرآنية</p>
+<h1 id="portalTitle">مركز عباد الرحمن</h1>
+<p>لإقراء وتحفيظ القرآن الكريم</p>
 </header>
 
 <main>
 
-<section id="home" class="card">
+<section id="groupsPage" class="card">
+<h2 style="text-align:center">المجموعات التعليمية</h2>
+<p style="text-align:center">اختاري مجموعتكِ للانتقال إلى الاختبارات</p>
+<div id="groupList" aria-live="polite">جارٍ تحميل المجموعات...</div>
+<button onclick="loadGroups()">تحديث المجموعات</button>
+</section>
+<section id="home" class="card" hidden>
+<button onclick="openGroups()" style="background:#e6d7bd;color:#665139">العودة إلى المجموعات</button>
 <h2>أهلًا وسهلًا بكِ</h2>
 <p>نسأل الله لكِ التوفيق والسداد</p>
 <h3>الاختبارات المتاحة</h3>
@@ -357,7 +364,7 @@ placeholder="رمز الدخول">
 </main>
 
 <footer>
-مجموعة وقري عينًا © 2026
+مركز عباد الرحمن © 2026
 </footer>
 
 <script>
@@ -368,6 +375,9 @@ const db = window.supabase.createClient(
 
 const el = id => document.getElementById(id);
 
+let selectedGroup = null;
+let groupRequest = 0;
+let examRequest = 0;
 let selectedExam = null;
 let questions = [];
 let answers = {};
@@ -385,17 +395,64 @@ el("status").textContent = message;
 }
 
 function show(page){
-["home","registration","examPage","resultPage"]
+["groupsPage","home","registration","examPage","resultPage"]
 .forEach(id => el(id).hidden = id !== page);
 }
 
+async function loadGroups(){
+const request = ++groupRequest;
+const list = el("groupList");
+list.textContent = "جارٍ تحميل المجموعات...";
+const {data,error} = await db.from("groups")
+.select("id,name,description,is_active").eq("is_active",true).order("name");
+if(request !== groupRequest) return;
+list.replaceChildren();
+if(error){ list.textContent = "تعذر تحميل المجموعات. حاولي مجددًا."; return; }
+if(!data.length){ list.textContent = "لا توجد مجموعات متاحة حاليًا"; return; }
+for(const group of data){
+const box = document.createElement("div");
+box.className = "card";
+box.style.textAlign = "center";
+const title = document.createElement("h3");
+title.textContent = "📖 مجموعة " + group.name;
+const desc = document.createElement("p");
+desc.textContent = group.description || "الاختبارات الإلكترونية";
+const button = document.createElement("button");
+button.textContent = "دخول المجموعة";
+button.onclick = () => {
+selectedGroup = group;
+el("portalTitle").textContent = "مجموعة " + group.name;
+show("home");
+loadExams();
+window.scrollTo(0,0);
+};
+box.append(title,desc,button);
+list.appendChild(box);
+}
+}
+function openGroups(){
+if(starting || submitting || (!el("examPage").hidden && !finished)) return;
+++examRequest;
+selectedGroup = null;
+selectedExam = null;
+el("portalTitle").textContent = "مركز عباد الرحمن";
+status("");
+show("groupsPage");
+loadGroups();
+window.scrollTo(0,0);
+}
 async function loadExams(){
+if(!selectedGroup) return;
+const request = ++examRequest;
+const groupId = selectedGroup.id;
+el("examList").textContent = "جارٍ تحميل الاختبارات...";
 status("");
 
 const {data,error} = await db.from("exams")
 .select("id,title,description,duration_minutes")
-.eq("is_active",true);
+.eq("is_active",true).eq("group_id",groupId);
 
+if(request !== examRequest || selectedGroup?.id !== groupId) return;
 if(error){
 el("examList").textContent =
 "تعذر تحميل الاختبارات";
@@ -718,7 +775,7 @@ event.returnValue = "";
 }
 });
 
-loadExams();
+loadGroups();
 </script>
   
 <script>
@@ -1333,7 +1390,7 @@ async function downloadResultCard() {
     ctx.restore();
 
     write("بسم الله الرحمن الرحيم",330,38);
-    write("مجموعة وقري عينًا",405,58,true);
+    write("مجموعة " + (selectedGroup?.name || ""),405,58,true);
     write("بطاقة نتيجة الاختبار",475,36);
 
     ctx.beginPath();
@@ -1368,7 +1425,7 @@ async function downloadResultCard() {
 
     write(read("resultMessage"),1200,42,true);
     write("زادكِ الله علمًا ونورًا وتوفيقًا",1270,34);
-    write("مجموعة وقري عينًا",1350,28);
+    write("مركز عباد الرحمن",1350,28);
 
     canvas.toBlob(function(blob) {
   if (!blob) {
