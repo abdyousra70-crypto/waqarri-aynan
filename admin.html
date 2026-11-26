@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>لوحة إدارة وقري عينًا</title>
+<title>لوحة إدارة مركز عباد الرحمن</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
@@ -158,7 +158,7 @@ input:focus, select:focus, textarea:focus {
 alt="شعار المركز"
 style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px solid #b99a50;box-shadow:0 4px 15px rgba(137,107,57,0.2);">
 <p>﷽</p>
-<h1>مجموعة وقري عينًا</h1>
+<h1 id="adminHeading">مركز عباد الرحمن لإقراء وتحفيظ القرآن الكريم</h1>
 <p>لوحة الإدارة</p>
 </header>
 <main>
@@ -170,6 +170,15 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <button onclick="signIn()">تسجيل الدخول</button>
 </section>
 
+<section id="centerAdmin" class="card" hidden>
+<h2>إدارة مجموعات المركز</h2>
+<div id="groupList"></div>
+<h3>إضافة مجموعة جديدة</h3>
+<input id="groupName" placeholder="اسم المجموعة">
+<textarea id="groupDescription" placeholder="وصف المجموعة (اختياري)"></textarea>
+<button id="addGroup" onclick="createGroup()">＋ إضافة مجموعة جديدة</button>
+<button onclick="signOut()">تسجيل الخروج</button>
+</section>
 <section id="dashboard" hidden>
 <div class="card">
 <h2>مرحبًا بكِ في لوحة الإدارة</h2>
@@ -193,7 +202,8 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 
     <button onclick="goToAdmin('resultsList')">🏆 نتائج الطالبات</button>
   </div>
-  <button onclick="signOut()"
+  <button id="returnCenter" onclick="location.reload()">↩️ العودة إلى إدارة المركز</button>
+<button onclick="signOut()"
 style="margin-top:20px;width:100%;">
 🚪 تسجيل الخروج
 </button>
@@ -257,6 +267,45 @@ const db = window.supabase.createClient(
 );
 
 const el = id => document.getElementById(id);
+let currentGroup = null;
+async function showCenter(){
+  currentGroup=null;
+  el("dashboard").hidden=true;
+  el("centerAdmin").hidden=false;
+  el("adminHeading").textContent="مركز عباد الرحمن لإقراء وتحفيظ القرآن الكريم";
+  const list=el("groupList"); list.textContent="جارٍ التحميل...";
+  const {data,error}=await db.from("groups").select("id,name,description,is_active").order("name");
+  if(error){list.textContent=error.message;return;}
+  list.replaceChildren();
+  for(const group of data){
+    const card=document.createElement("div");card.className="card";
+    const h=document.createElement("h3");h.textContent=group.name;
+    const p=document.createElement("p");p.textContent=group.description||"";
+    const b=document.createElement("button");b.textContent="إدارة المجموعة";b.onclick=()=>openGroup(group);
+    card.append(h,p,b);list.append(card);
+  }
+}
+async function createGroup(){
+  const name=el("groupName").value.trim();if(!name){status("أدخلي اسم المجموعة");return;}
+  const b=el("addGroup");b.disabled=true;
+  try{
+    const {error}=await db.from("groups").insert({name,description:el("groupDescription").value.trim()});
+    if(error)throw error;
+    el("groupName").value="";el("groupDescription").value="";status("تم إنشاء المجموعة");await showCenter();
+  }catch(e){status(e.message);}finally{b.disabled=false;}
+}
+async function openGroup(group){
+  currentGroup=group;selectedExam=null;savedResults=[];
+  el("resultsExam").value="";el("resultsSearch").value="";el("resultsList").replaceChildren();
+  el("questionList").replaceChildren();el("questionExamTitle").textContent="";panel.hidden=true;
+  el("codeExam").replaceChildren();el("codeList").replaceChildren();el("newExamCode").value="";
+  for(const id of ["statExams","statPublished","statStudents","statAverage"])el(id).textContent="—";
+  el("centerAdmin").hidden=true;el("dashboard").hidden=false;
+  el("adminHeading").textContent=group.name;goToAdmin("quickNav");
+  el("returnCenter").disabled=true;
+  try{await loadExams();await loadResults();}finally{el("returnCenter").disabled=false;}
+}
+
 
 function status(message){
 el("status").textContent=message;
@@ -289,10 +338,8 @@ status("تعذر التحقق من صلاحية المشرفة.");
 return;
 }
 el("login").hidden=true;
-el("dashboard").hidden=false;
 status("");
-await loadExams();
-await loadResults();
+await showCenter();
 }
 
 async function signOut(){
@@ -301,6 +348,7 @@ location.reload();
 }
 
 async function createExam(){
+if(!currentGroup)return;
 const title=el("title").value.trim();
 const duration=Number(el("duration").value);
 
@@ -313,6 +361,7 @@ el("create").disabled=true;
 
 const {error}=await db.from("exams").insert({
 title:title,
+group_id:currentGroup.id,
 description:el("description").value,
 duration_minutes:duration,
 is_active:false
@@ -334,7 +383,8 @@ await loadExams();
 async function loadExams(){
 const {data,error}=await db.from("exams")
 .select("*")
-.order("created_at",{ascending:false});
+.eq("group_id",currentGroup.id)
+    .order("created_at",{ascending:false});
 
 if(error){
 status(error.message);
@@ -400,6 +450,7 @@ loadExams = async function(){
   const {data,error} = await db
     .from("exams")
     .select("id,title,is_active")
+    .eq("group_id",currentGroup.id)
     .order("created_at",{ascending:false});
 
   if(error){
@@ -647,6 +698,7 @@ async function loadResults(){
   const {data:exams,error:examError} =
     await db.from("exams")
     .select("id,title")
+    .eq("group_id",currentGroup.id)
     .order("created_at",{ascending:false});
 
   if(examError){
@@ -673,7 +725,8 @@ async function loadResults(){
 
   while(true){
     let query = db.from("results")
-      .select("id,exam_id,student_name,score,total_questions,submitted_at")
+      .select("id,exam_id,student_name,score,total_questions,submitted_at,exams!inner(group_id)")
+      .eq("exams.group_id",currentGroup.id)
       .order("submitted_at",{ascending:false})
       .order("id")
       .range(offset,offset+499);
@@ -876,7 +929,7 @@ function downloadResults(){
   const a = document.createElement("a");
 
   a.href = url;
-  a.download = "نتائج-وقري-عينا.csv";
+  a.download = "نتائج-"+currentGroup.name+".csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -937,7 +990,8 @@ async function loadCodeExams(){
 const {data,error}=await db
 .from("exams")
 .select("id,title")
-.order("created_at",{ascending:false});
+.eq("group_id",currentGroup.id)
+    .order("created_at",{ascending:false});
 
 if(error){
 el("codeStatus").textContent=error.message;
@@ -1205,7 +1259,8 @@ await previousLoadExams();
 const {data,error}=await db
 .from("exams")
 .select("id,title,description,duration_minutes,is_active")
-.order("created_at",{ascending:false});
+.eq("group_id",currentGroup.id)
+    .order("created_at",{ascending:false});
 
 if(error){
 status(error.message);
