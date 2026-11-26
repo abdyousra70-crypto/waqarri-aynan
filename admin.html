@@ -53,10 +53,58 @@ cursor:pointer;
 button:disabled{opacity:.5}
 [hidden]{display:none!important}
 #status{white-space:pre-wrap}
+ header {
+  background: linear-gradient(135deg, #faf6ec, #e6d7bd, #f5eddf);
+  border-bottom: 3px solid #b99a50;
+  box-shadow: 0 5px 20px rgba(137,107,57,0.12);
+}
+
+header h1 {
+  color: #896b39;
+  font-size: 28px;
+  margin: 12px 0;
+}
+
+header::after {
+  content: "❧ ✦ ❧";
+  display: block;
+  color: #b99a50;
+  font-size: 24px;
+  margin-top: 12px;
+  letter-spacing: 8px;
+}
+ .card {
+  background: #fffdf8;
+  border: 1px solid #d8c7a3;
+  border-radius: 20px;
+  box-shadow: 0 6px 20px rgba(137,107,57,0.08);
+}
+
+button {
+  background: linear-gradient(135deg, #bfa66b, #896b39);
+  border-radius: 12px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+input, select, textarea {
+  background: #fffdf8;
+  border: 1px solid #d8c7a3;
+  border-radius: 10px;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #b99a50;
+  box-shadow: 0 0 0 3px rgba(185,154,80,0.15);
+}
 </style>
 </head>
 <body>
 <header>
+ <img src="5bd0d512-2e49-429d-b8aa-c482f13c0da9.jpeg"
+alt="شعار المركز"
+style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px solid #b99a50;box-shadow:0 4px 15px rgba(137,107,57,0.2);">
 <p>﷽</p>
 <h1>مجموعة وقري عينًا</h1>
 <p>لوحة الإدارة</p>
