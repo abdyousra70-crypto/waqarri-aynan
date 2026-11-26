@@ -343,7 +343,9 @@ placeholder="رمز الدخول">
 <p style="color:#52765a;">
 ✓ تم حفظ نتيجتكِ بنجاح
 </p>
-
+<button type="button" onclick="downloadResultCard()" style="background:linear-gradient(135deg,#c6ab70,#896b39);color:white;margin-bottom:12px;border-radius:15px;width:100%;">
+تحميل بطاقة النتيجة ↓
+</button>
 <button onclick="location.reload()" style="background:linear-gradient(135deg,#c5a66a,#896b39);color:white;border-radius:15px;padding:15px;width:100%;">
 العودة إلى الصفحة الرئيسية
 </button>
@@ -1284,6 +1286,101 @@ setTimeout(function () {
   if (intro) intro.remove();
 }, 6000);
 </script>
+<script>
+async function downloadResultCard() {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1440;
 
+    const ctx = canvas.getContext("2d");
+
+    const bg = ctx.createLinearGradient(0,0,1080,1440);
+    bg.addColorStop(0,"#fffdf7");
+    bg.addColorStop(1,"#eee4ce");
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,1080,1440);
+
+    ctx.strokeStyle = "#b99a50";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(35,35,1010,1370);
+
+    ctx.lineWidth = 2;
+    ctx.strokeRect(50,50,980,1340);
+
+    function write(text,y,size,bold=false,color="#896b39",direction="rtl") {
+      ctx.fillStyle = color;
+      ctx.font = (bold ? "bold " : "") + size + "px Arial";
+      ctx.textAlign = "center";
+      ctx.direction = direction;
+      ctx.fillText(text,540,y,900);
+    }
+
+    function read(id) {
+      return document.getElementById(id).textContent.trim();
+    }
+
+    const logo = new Image();
+    logo.src = "5bd0d512-2e49-429d-b8aa-c482f13c0da9.jpeg";
+    await logo.decode();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(540,170,100,0,Math.PI*2);
+    ctx.clip();
+    ctx.drawImage(logo,440,70,200,200);
+    ctx.restore();
+
+    write("بسم الله الرحمن الرحيم",330,38);
+    write("مجموعة وقري عينًا",405,58,true);
+    write("بطاقة نتيجة الاختبار",475,36);
+
+    ctx.beginPath();
+    ctx.moveTo(180,515);
+    ctx.lineTo(900,515);
+    ctx.stroke();
+
+    write(read("resultName"),600,55,true);
+    write(read("resultExamTitle"),670,38);
+    write(read("resultDate"),730,32);
+
+    const percentText = read("percentage");
+    const percent = Number(percentText.match(/\d+/)?.[0] || 0);
+
+    ctx.beginPath();
+    ctx.arc(540,950,155,0,Math.PI*2);
+    ctx.strokeStyle = "#e3d8bf";
+    ctx.lineWidth = 18;
+    ctx.stroke();
+
+    if(percent > 0) {
+      ctx.beginPath();
+      ctx.arc(540,950,155,-Math.PI/2,
+        -Math.PI/2 + Math.PI*2*Math.min(percent,100)/100);
+      ctx.strokeStyle = "#b99a50";
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+
+    write(read("grade"),940,65,true,"#896b39","ltr");
+    write(percent+"%",1010,42,true,"#896b39","ltr");
+
+    write(read("resultMessage"),1200,42,true);
+    write("زادكِ الله علمًا ونورًا وتوفيقًا",1270,34);
+    write("مجموعة وقري عينًا",1350,28);
+
+    const link = document.createElement("a");
+    link.download = "بطاقة-نتيجة-الاختبار.png";
+    link.href = canvas.toDataURL("image/png");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+  } catch(error) {
+    alert("تعذر تحميل البطاقة، يرجى المحاولة مرة أخرى.");
+  }
+}
+</script>
 </body>
 </html>
