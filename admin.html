@@ -173,10 +173,12 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <section id="centerAdmin" class="card" hidden>
 <h2>إدارة مجموعات المركز</h2>
 <div id="groupList"></div>
+<div id="ownerCreateGroup" hidden>
 <h3>إضافة مجموعة جديدة</h3>
 <input id="groupName" placeholder="اسم المجموعة">
 <textarea id="groupDescription" placeholder="وصف المجموعة (اختياري)"></textarea>
 <button id="addGroup" onclick="createGroup()">＋ إضافة مجموعة جديدة</button>
+</div>
 <button onclick="signOut()">تسجيل الخروج</button>
 </section>
 <section id="dashboard" hidden>
@@ -268,15 +270,20 @@ const db = window.supabase.createClient(
 
 const el = id => document.getElementById(id);
 let currentGroup = null;
+ let currentAdminRole = null;
 async function showCenter(){
   currentGroup=null;
   el("dashboard").hidden=true;
   el("centerAdmin").hidden=false;
   el("adminHeading").textContent="مركز عباد الرحمن لإقراء وتحفيظ القرآن الكريم";
   const list=el("groupList"); list.textContent="جارٍ التحميل...";
-  const {data,error}=await db.from("groups").select("id,name,description,is_active").order("name");
+  const {data,error}=await db.rpc("list_my_managed_groups");
   if(error){list.textContent=error.message;return;}
   list.replaceChildren();
+ if(!data.length){
+  list.textContent="لا توجد مجموعات معيّنة لكِ حاليًا.";
+  return;
+}
   for(const group of data){
     const card=document.createElement("div");card.className="card";
     const h=document.createElement("h3");h.textContent=group.name;
@@ -328,7 +335,7 @@ await checkAdmin(data.user);
 async function checkAdmin(user){
 if(!user)return;
 const {data,error}=await db.from("admins")
-.select("user_id")
+.select("user_id,role")
 .eq("user_id",user.id)
 .maybeSingle();
 
@@ -337,6 +344,8 @@ await db.auth.signOut();
 status("تعذر التحقق من صلاحية المشرفة.");
 return;
 }
+ currentAdminRole = data.role;
+ el("ownerCreateGroup").hidden = currentAdminRole !== "owner";
 el("login").hidden=true;
 status("");
 await showCenter();
