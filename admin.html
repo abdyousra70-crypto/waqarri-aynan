@@ -174,12 +174,23 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <h2>إدارة مجموعات المركز</h2>
 <div id="groupList"></div>
 <div id="ownerCreateGroup" hidden>
+ <button onclick="showSupervisors()">👥 إدارة المشرفات</button>
 <h3>إضافة مجموعة جديدة</h3>
 <input id="groupName" placeholder="اسم المجموعة">
 <textarea id="groupDescription" placeholder="وصف المجموعة (اختياري)"></textarea>
 <button id="addGroup" onclick="createGroup()">＋ إضافة مجموعة جديدة</button>
 </div>
 <button onclick="signOut()">تسجيل الخروج</button>
+</section>
+ <section id="supervisorsAdmin" class="card" hidden>
+<button onclick="backFromSupervisors()">↩️ العودة إلى إدارة المركز</button>
+<h2>إدارة المشرفات</h2>
+<h3>تعيين مشرفة جديدة</h3>
+<input id="supervisorEmail" type="email" placeholder="البريد الإلكتروني للمشرفة">
+<select id="supervisorGroup"></select>
+<button onclick="assignSupervisor()">＋ تعيين المشرفة</button>
+<h3>المشرفات الحاليات</h3>
+<div id="supervisorsList"></div>
 </section>
 <section id="dashboard" hidden>
 <div class="card">
@@ -2359,6 +2370,126 @@ function goToAdmin(id) {
 window.addEventListener("load", () => {
   goToAdmin("quickNav");
 });
+  async function showSupervisors(){
+  if(currentAdminRole !== "owner") return;
+
+  el("centerAdmin").hidden = true;
+  el("dashboard").hidden = true;
+  el("supervisorsAdmin").hidden = false;
+
+  const select = el("supervisorGroup");
+  select.replaceChildren();
+
+  const {data,error} = await db.rpc("list_my_managed_groups");
+
+  if(error){
+    status(error.message);
+    return;
+  }
+
+  for(const group of data){
+    const option = document.createElement("option");
+    option.value = group.id;
+    option.textContent = group.name;
+    select.append(option);
+  }
+
+  await loadSupervisors();
+  window.scrollTo(0,0);
+}
+
+async function backFromSupervisors(){
+  el("supervisorsAdmin").hidden = true;
+  await showCenter();
+  window.scrollTo(0,0);
+}
+  async function loadSupervisors(){
+  if(currentAdminRole !== "owner") return;
+
+  const list = el("supervisorsList");
+  list.textContent = "جارٍ التحميل...";
+
+  const {data,error} = await db.rpc("list_group_admins");
+
+  if(error){
+    list.textContent = error.message;
+    return;
+  }
+
+  list.replaceChildren();
+
+  if(!data.length){
+    list.textContent = "لا توجد مشرفات معينات حالياً";
+    return;
+  }
+
+  for(const admin of data){
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const email = document.createElement("h3");
+    email.textContent = admin.email;
+
+    const group = document.createElement("p");
+    group.textContent = "المجموعة: " + admin.group_name;
+
+    const state = document.createElement("p");
+    state.textContent = admin.confirmed
+      ? "الحساب مؤكد"
+      : "بانتظار تأكيد الحساب";
+
+    const remove = document.createElement("button");
+    remove.textContent = "إزالة صلاحية المشرفة";
+    remove.style.background = "#a05e55";
+
+    remove.onclick = async () => {
+      if(!confirm("هل تريدين إزالة صلاحية هذه المشرفة من المجموعة؟")) return;
+
+      const {error} = await db.rpc("remove_group_admin",{
+        p_email: admin.email,
+        p_group_id: admin.group_id
+      });
+
+      if(error){
+        alert(error.message);
+        return;
+      }
+
+      await loadSupervisors();
+    };
+
+    card.append(email,group,state,remove);
+    list.append(card);
+  }
+}
+
+async function assignSupervisor(){
+  if(currentAdminRole !== "owner") return;
+
+  const email = el("supervisorEmail").value.trim();
+  const groupId = el("supervisorGroup").value;
+
+  if(!email || !groupId){
+    alert("أدخلي البريد الإلكتروني واختاري المجموعة");
+    return;
+  }
+
+  const {error} = await db.rpc("assign_group_admin",{
+    p_email: email,
+    p_group_id: groupId
+  });
+
+  if(error){
+    alert(error.message === "User not found"
+      ? "يجب إنشاء حساب للمشرفة أولاً"
+      : error.message);
+    return;
+  }
+
+  el("supervisorEmail").value = "";
+  alert("تم تعيين المشرفة بنجاح");
+  await loadSupervisors();
+}
 </script>
 </body>
 </html>
