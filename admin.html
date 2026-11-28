@@ -297,7 +297,18 @@ const db = window.supabase.createClient(
 "https://hadkrvkqmmpimqnrboym.supabase.co",
 "sb_publishable__HrFXlj95XyTSlONB_Akzw_v62Sy2wl"
 );
-
+const testDb = window.supabase.createClient(
+  db.supabaseUrl,
+  db.supabaseKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: "temporary-supervisor-test"
+    }
+  }
+);
 const el = id => document.getElementById(id);
 let currentGroup = null;
  let currentAdminRole = null;
@@ -2723,12 +2734,26 @@ if(account.role === "group_admin"){
   });
 }
   async function testCreateSupervisor(){
-  const {data} = await db.auth.getSession();
+  const email = "test-supervisor@example.com";
+const password = el("password").value;
 
-  if(!data.session){
-    alert("يجب تسجيل الدخول أولاً");
-    return;
-  }
+if(!password){
+  alert("أدخلي كلمة مرور الحساب التجريبي");
+  return;
+}
+
+const {data, error} =
+  await testDb.auth.signInWithPassword({
+    email,
+    password
+  });
+
+el("password").value = "";
+
+if(error || !data.session){
+  alert("تعذر تسجيل دخول الحساب التجريبي");
+  return;
+}
 
   try {
     const response = await fetch(
