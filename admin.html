@@ -176,6 +176,7 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <div id="ownerCreateGroup" hidden>
  <button onclick="showSupervisors()">👥 إدارة المشرفات</button>
 <button onclick="showAdminAccounts()">👤 إدارة الحسابات</button>
+ <button onclick="testCreateSupervisor()">اختبار إنشاء المشرفات</button>
  <h3>إضافة مجموعة جديدة</h3>
 <input id="groupName" placeholder="اسم المجموعة">
 <textarea id="groupDescription" placeholder="وصف المجموعة (اختياري)"></textarea>
@@ -2720,6 +2721,39 @@ if(account.role === "group_admin"){
 }
     box.appendChild(card);
   });
+}
+  async function testCreateSupervisor(){
+  const {data} = await db.auth.getSession();
+
+  if(!data.session){
+    alert("يجب تسجيل الدخول أولاً");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "https://hadkrvkqmmpimqnrboym.supabase.co/functions/v1/create-supervisor",
+      {
+        method: "POST",
+        headers: {
+          "Authorization":
+            "Bearer " + data.session.access_token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({})
+      }
+    );
+
+    const result = await response.json();
+
+    alert(
+      "Status: " + response.status +
+      "\n" + JSON.stringify(result)
+    );
+
+  } catch {
+    alert("تعذر الاتصال بالخادم");
+  }
 }
 </script>
 </body>
