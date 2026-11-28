@@ -2751,7 +2751,7 @@ const {data, error} =
 el("password").value = "";
 
 if(error || !data.session){
-  alert("تعذر تسجيل دخول الحساب التجريبي");
+  alert(error ? error.message : "No session");
   return;
 }
 
