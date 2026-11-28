@@ -175,7 +175,8 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <div id="groupList"></div>
 <div id="ownerCreateGroup" hidden>
  <button onclick="showSupervisors()">👥 إدارة المشرفات</button>
-<h3>إضافة مجموعة جديدة</h3>
+<button onclick="showAdminAccounts()">👤 إدارة الحسابات</button>
+ <h3>إضافة مجموعة جديدة</h3>
 <input id="groupName" placeholder="اسم المجموعة">
 <textarea id="groupDescription" placeholder="وصف المجموعة (اختياري)"></textarea>
 <button id="addGroup" onclick="createGroup()">＋ إضافة مجموعة جديدة</button>
@@ -192,7 +193,24 @@ style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2px so
 <h3>المشرفات الحاليات</h3>
 <div id="supervisorsList"></div>
 </section>
-<section id="dashboard" hidden>
+<section id="adminAccounts" class="card" hidden>
+
+<button onclick="backFromAdminAccounts()">
+↩️ العودة إلى المركز
+</button>
+
+<h2>👤 إدارة حسابات المركز</h2>
+
+<p>عرض الحسابات الإدارية وحالة كل حساب</p>
+
+<button onclick="loadAdminAccounts()">
+🔄 تحديث الحسابات
+</button>
+
+<div id="adminAccountsList"></div>
+
+</section>
+ <section id="dashboard" hidden>
 <div class="card">
 <h2>مرحبًا بكِ في لوحة الإدارة</h2>
 <button onclick="signOut()">تسجيل الخروج</button>
@@ -2489,6 +2507,87 @@ async function assignSupervisor(){
   el("supervisorEmail").value = "";
   alert("تم تعيين المشرفة بنجاح");
   await loadSupervisors();
+}
+  async function showAdminAccounts(){
+  if(currentAdminRole !== "owner") return;
+
+  el("centerAdmin").hidden = true;
+  el("adminAccounts").hidden = false;
+
+  await loadAdminAccounts();
+}
+
+function backFromAdminAccounts(){
+  el("adminAccountsList").replaceChildren();
+  el("adminAccounts").hidden = true;
+  el("centerAdmin").hidden = false;
+}
+
+async function loadAdminAccounts(){
+  if(currentAdminRole !== "owner") return;
+
+  const box = el("adminAccountsList");
+  box.textContent = "جاري تحميل الحسابات...";
+
+  const {data, error} = await db.rpc(
+    "list_admin_accounts"
+  );
+
+  if(error){
+    box.textContent = "تعذر تحميل الحسابات";
+    return;
+  }
+
+  box.replaceChildren();
+
+  if(!data || !data.length){
+    box.textContent = "لا توجد حسابات";
+    return;
+  }
+
+  data.forEach(account => {
+    const card = document.createElement("div");
+
+    card.style.cssText =
+      "background:#fffaf0;border:1px solid #d4bd89;border-radius:14px;padding:15px;margin:12px 0;overflow-wrap:anywhere;";
+
+    const lines = [
+      account.role === "owner"
+        ? "👑 مالكة المركز"
+        : "👤 مشرفة مجموعة",
+
+      "📧 " + account.email,
+
+      account.confirmed
+        ? "✅ البريد مؤكد"
+        : "⚠️ البريد غير مؤكد",
+
+      account.has_password
+        ? "🔐 كلمة المرور موجودة"
+        : "⚠️ كلمة المرور غير معينة",
+
+      "آخر دخول: " +
+      (account.last_sign_in_at
+        ? new Date(account.last_sign_in_at)
+          .toLocaleString("ar")
+        : "لم تسجل الدخول بعد")
+    ];
+
+    lines.forEach((line, i) => {
+      const p = document.createElement("p");
+      p.textContent = line;
+      p.style.margin = "8px 0";
+
+      if(i === 0){
+        p.style.fontWeight = "bold";
+        p.style.color = "#896b39";
+      }
+
+      card.appendChild(p);
+    });
+
+    box.appendChild(card);
+  });
 }
 </script>
 </body>
