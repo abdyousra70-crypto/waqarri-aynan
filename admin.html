@@ -2585,7 +2585,73 @@ async function loadAdminAccounts(){
 
       card.appendChild(p);
     });
+const status = document.createElement("p");
 
+status.textContent = account.is_active
+  ? "🟢 الحساب نشط"
+  : "🔴 الحساب معطل";
+
+status.style.color = account.is_active
+  ? "#27833e"
+  : "#b94242";
+
+status.style.fontWeight = "bold";
+
+card.appendChild(status);
+
+if(account.role === "group_admin"){
+
+  const btn = document.createElement("button");
+
+  btn.type = "button";
+
+  btn.textContent = account.is_active
+    ? "تعطيل المشرفة"
+    : "تفعيل المشرفة";
+
+  btn.style.cssText =
+    "width:100%;margin-top:10px;color:white;background:" +
+    (account.is_active ? "#b94242" : "#27833e");
+
+  btn.onclick = async () => {
+
+    const nextStatus = !account.is_active;
+
+    if(!confirm(
+      nextStatus
+        ? "هل تريدين تفعيل هذه المشرفة؟"
+        : "هل تريدين تعطيل صلاحيات هذه المشرفة؟"
+    )) return;
+
+    btn.disabled = true;
+
+    const {error} = await db.rpc(
+      "set_admin_status",
+      {
+        p_user_id: account.user_id,
+        p_is_active: nextStatus
+      }
+    );
+
+    if(error){
+      alert("تعذر تغيير حالة الحساب");
+      btn.disabled = false;
+      return;
+    }
+
+    await loadAdminAccounts();
+  };
+
+  card.appendChild(btn);
+
+}else{
+
+  const protectedText = document.createElement("p");
+  protectedText.textContent = "🔒 حساب مالكة محمي";
+  protectedText.style.color = "#896b39";
+  card.appendChild(protectedText);
+
+}
     box.appendChild(card);
   });
 }
