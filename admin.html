@@ -2585,7 +2585,73 @@ async function loadAdminAccounts(){
 
       card.appendChild(p);
     });
-const status = document.createElement("p");
+const nameText = document.createElement("p");
+
+nameText.textContent =
+  "👤 الاسم: " + (account.full_name || "غير محدد");
+
+nameText.style.fontWeight = "bold";
+nameText.style.color = "#896b39";
+
+card.appendChild(nameText);
+
+const nameBtn = document.createElement("button");
+
+nameBtn.type = "button";
+nameBtn.textContent = "✏️ تعديل الاسم";
+
+nameBtn.style.cssText =
+  "width:100%;margin-top:8px;background:#a88b50;color:white;";
+
+nameBtn.onclick = async () => {
+
+  const {data, error: authError} =
+    await db.auth.getUser();
+
+  if(authError || !data.user){
+    alert("تعذر التحقق من الحساب");
+    return;
+  }
+
+  if(account.role === "owner" &&
+     account.user_id !== data.user.id){
+    alert("يمكن لكل مالكة تعديل اسمها فقط");
+    return;
+  }
+
+  const name = prompt(
+    "أدخلي الاسم الكامل:",
+    account.full_name || ""
+  );
+
+  if(name === null) return;
+
+  const cleanName = name.trim();
+
+  if(cleanName.length < 2 ||
+     cleanName.length > 100){
+    alert("يرجى إدخال اسم صحيح");
+    return;
+  }
+
+  const {error} = await db.rpc(
+    "set_admin_name",
+    {
+      p_user_id: account.user_id,
+      p_full_name: cleanName
+    }
+  );
+
+  if(error){
+    alert("تعذر حفظ الاسم");
+    return;
+  }
+
+  await loadAdminAccounts();
+};
+
+card.appendChild(nameBtn);
+   const status = document.createElement("p");
 
 status.textContent = account.is_active
   ? "🟢 الحساب نشط"
